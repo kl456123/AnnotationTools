@@ -5,6 +5,9 @@
 #include <set>
 #include <cmath>
 
+// vtk library
+#include <vtkPlane.h>
+#include <vtkPNGReader.h>
 #include <vtkTransformPolyDataFilter.h>
 #include <vtkTextActor.h>
 #include <vtkTextProperty.h>
@@ -33,8 +36,12 @@
 #include <vtkCamera.h>
 #include <vtkImplicitFunctionCollection.h>
 #include <vtkMath.h>
+#include <vtkImageActor.h>
+#include <vtkImageMapper3D.h>
+#include <vtkImageMapper.h>
 
 // boxwidget
+#include <vtkBorderWidget.h>
 #include <vtkBoxWidget.h>
 #include <vtkCommand.h>
 #include <vtkTransform.h>
@@ -121,6 +128,26 @@ vtkSmartPointer<vtkVertexGlyphFilter> ReadPointCloudFromBin(std::string& filenam
     return glyphFilter;
 }
 
+vtkSmartPointer<vtkActor2D> ReadImageFromPNGFile(std::string& filename){
+    auto pngReader = vtkSmartPointer<vtkPNGReader>::New();
+    pngReader->SetFileName(filename.c_str());
+
+    auto imageActor = vtkSmartPointer<vtkActor2D>::New();
+    auto mapper = vtkSmartPointer<vtkImageMapper>::New();
+    mapper->SetColorWindow(255);
+    mapper->SetColorLevel(127.5);
+    mapper->RenderToRectangleOn();
+    imageActor->SetMapper(mapper);
+    imageActor->GetMapper()->SetInputConnection(pngReader->GetOutputPort());
+    // support to mapper
+    imageActor->SetPosition2(1, 1);
+    // color it first
+
+    // imageActor->GetMapper()->SliceFacesCameraOn();
+    // imageActor->GetMapper()->SliceAtFocalPointOn();
+    return imageActor;
+}
+
 // class Storage{
 // public:
 // Storage(const std::string storage_dir){
@@ -143,6 +170,58 @@ vtkSmartPointer<vtkVertexGlyphFilter> ReadPointCloudFromBin(std::string& filenam
 // FILE* fd;
 
 // };
+//
+//
+void MatrixMultiply(double A[4][3], double B[3], double C[4]){
+    for(int i=0;i<4;i++){
+        C[i] = A[i][0]*B[0] + A[i][1]*B[1] + A[i][2]*B[2];
+    }
+}
+
+vtkSmartPointer <vtkImplicitBoolean> GenerateFrustum(double PT[4][3], double box[]){
+    double l_left[] = {box[0], box[1], box[0], box[3]};
+    double l_right[] = {box[0], box[1], box[2], box[1]};
+    double l_top[] = {box[2], box[1], box[2], box[3]};
+    double l_bottom[] = {box[0], box[3], box[2], box[3]};
+    double lines[4][4];
+    auto planes = vtkSmartPointer<vtkImplicitBoolean>::New();
+    planes->SetOperationTypeToIntersection();
+    for(int i=0;i<4;i++){
+        lines[0][i] = l_left[i];
+        lines[1][i] = l_right[i];
+        lines[2][i] = l_top[i];
+        lines[3][i] = l_bottom[i];
+    }
+    for(int i=0;i<4;i++){
+        double a = lines[i][3] - lines[i][1];
+        double b = lines[i][0] - lines[i][2];
+        double c = lines[i][2] * lines[i][1]-lines[i][0]* lines[i][3];
+        double B[3] = {a,b,c};
+        double C[4];
+        MatrixMultiply(PT, B, C);
+        auto plane = vtkSmartPointer<vtkPlane>::New();
+        if(i==0 or i==3){
+            plane->SetNormal(-C[0],-C[0],-C[2]);
+        }else{
+            plane->SetNormal(C[0],C[1],C[2]);
+        }
+        // get origin
+        double origin[3]={0};
+        if(C[2]){
+            origin[2]= -C[3]/C[2];
+        }else if(C[1]){
+            origin[1] = C[3]/C[1];
+        }else{
+            origin[0] = C[3]/C[0];
+        }
+        std::cout<<"Origin: "<<origin[0]<<" "<<origin[1]<<" "<<origin[2]<<std::endl;
+        std::cout<<"Normal: "<<C[0]<<" "<< C[1]<<" "<<C[2]<<std::endl;
+        plane->SetOrigin(origin);
+        planes->AddFunction(plane);
+    }
+    return planes;
+
+}
 
 class InteractorStyle: public vtkInteractorStyleRubberBandPick{
     public:
@@ -250,12 +329,21 @@ class InteractorStyle: public vtkInteractorStyleRubberBandPick{
         }
 
         void ResetHorizontalView(vtkCamera* camera){
-            camera->SetPosition(0.0, 0.0, -100);
-            camera->SetFocalPoint(0.0, 0.0, 0.0);
-            camera->SetViewUp(0.0, -1.0, 0.0);
-            camera->ComputeViewPlaneNormal();
+            camera->SetPosition(0.06046166, -0.00176016,  0.00498102);
+            camera->SetFocalPoint(0.07551017, 0.02256332, 1.);
+            camera->SetViewUp(0.        , -0.96892317, -0.24736186);
+            // camera->ComputeViewPlaneNormal();
+            double image_size = 375;
+            double focal = 707;
+            double view_angle = std::atan(image_size/2/focal)*180/3.1415*2;
+            camera->SetViewAngle(view_angle);
             camera->SetClippingRange(0.1, 3000);
+            double imageShape[2] = {375, 1242};
+            double windowCenter[2] = {2*604/imageShape[1]-1, 2*(1-180/imageShape[0])-1};
+            std::cout<<"Window Center: "<<windowCenter<<std::endl;
+            camera->SetWindowCenter(windowCenter[0], windowCenter[1]);
         }
+
 
         void ResetVerticalView(vtkCamera* camera){
             camera->SetPosition(0.0, -100, 0.0);
@@ -487,17 +575,44 @@ class InteractorStyle: public vtkInteractorStyleRubberBandPick{
         }
 
         virtual void OnLeftButtonUp() override{
+            std::cout<<"Current renderer "<<this->GetCurrentRenderer()<<std::endl;
             // Forward Event
             vtkInteractorStyleRubberBandPick::OnLeftButtonUp();
             if(!this->CurrentMode or IsSelectPoint()){
                 // pick actor as selectedActor, used for modify precisely
                 this->PickActor();
             }else{
-                vtkPlanes* frustum  = static_cast<vtkAreaPicker*>(this->GetInteractor()->GetPicker())->GetFrustum();
-                // deepcopy planes
-                vtkSmartPointer<vtkPlanes> frustum_deepcopy = vtkSmartPointer<vtkPlanes>::New();
-                frustum_deepcopy->SetNormals(frustum->GetNormals());
-                frustum_deepcopy->SetPoints(frustum->GetPoints());
+
+                vtkSmartPointer<vtkImplicitFunction> frustum_deepcopy;
+                if(this->GetCurrentRenderer()==this->ImageRenderer){
+                    std::cout<<"Over Image Region "<<std::endl;
+                    this->SetCurrentRenderer(this->PointCloudRenderer);
+                    int windowSize[2];
+                    this->GetInteractor()->GetSize(windowSize);
+                    double scales[2] = {windowSize[0]/1242.0,windowSize[1]/2.0/375.0};
+                    double box[4] = {double(this->StartPosition[0])/scales[0],
+                                    double(windowSize[1]-this->StartPosition[1])/scales[1],
+                                    double(this->EndPosition[0])/scales[0],
+                                    double(windowSize[1]-this->EndPosition[1])/scales[1]};
+                    std::cout<<"Selected Region "<<box[0]<<" "<<box[1]<<" "<<box[2]<<" "<<box[3]<<std::endl;
+                    std::cout<<"Window Size: "<<windowSize[0]<<" "<<windowSize[1]<<std::endl;
+                    double PT[4][3] = {{7.070493000000e+02,0,0},
+                        {0,7.070493000000e+02, 0},
+                        {6.040814000000e+02,1.805066000000e+02,1},
+                        {4.575831000000e+01,-3.454157000000e-01,4.981016000000e-03}};
+                    frustum_deepcopy = GenerateFrustum(PT, box);
+                }else{
+
+                    auto frustum  = static_cast<vtkAreaPicker*>(this->GetInteractor()->GetPicker())->GetFrustum();
+                    // deepcopy planes
+                    vtkSmartPointer<vtkPlanes> frustum_deepcopy1 = vtkSmartPointer<vtkPlanes>::New();
+                    frustum_deepcopy1->SetNormals(frustum->GetNormals());
+                    frustum_deepcopy1->SetPoints(frustum->GetPoints());
+                    frustum_deepcopy = frustum_deepcopy1;
+                    std::cout<<"Over PointCloud Region "<<std::endl;
+                }
+
+
 
                 auto *rwi = this->GetInteractor();
                 HandleCurrentSelection();
@@ -524,18 +639,27 @@ class InteractorStyle: public vtkInteractorStyleRubberBandPick{
         void SetPoints(vtkSmartPointer<vtkPolyData> points){
             this->Points = points;
         }
+        void SetImageRenderer(vtkRenderer* renderer){
+            this->ImageRenderer = renderer;
+        }
+        void SetPointCloudRenderer(vtkRenderer* renderer){
+            this->PointCloudRenderer = renderer;
+        }
     private:
         vtkSmartPointer<vtkPolyData> Points;
         vtkSmartPointer<vtkActor> SelectedActor;
         vtkSmartPointer<vtkDataSetMapper> SelectedMapper;
         vtkSmartPointer<vtkBoxWidget> SelectedBoxWidget;
         std::set<vtkSmartPointer<vtkBoxWidget>> BoxWidgets;
+        std::set<vtkSmartPointer<vtkBorderWidget>> BorderWidgets;
 
         vtkSmartPointer<vtkTextActor> textActor;
         FILE* fd;
 
         std::set<vtkSmartPointer<vtkBoxWidget>>::iterator it;
         vtkSmartPointer<vtkNamedColors> Colors;
+        vtkSmartPointer<vtkRenderer> ImageRenderer;
+        vtkSmartPointer<vtkRenderer> PointCloudRenderer;
 };
 
 vtkStandardNewMacro(InteractorStyle);
@@ -573,8 +697,30 @@ int main(){
 
     auto renderer = vtkSmartPointer<vtkRenderer>::New();
     renderer->AddActor(actor);
+
+    // image actor
+    std::string imageFileName = "/home/breakpoint/Data/2011_09_26/2011_09_26_drive_0001_sync/image_02/data/0000000000.png";
+    auto imageActor = ReadImageFromPNGFile(imageFileName);
+    auto imageRenderer = vtkSmartPointer<vtkRenderer>::New();
+    imageRenderer->AddActor(imageActor);
+    imageRenderer->SetViewport(0,0.5, 1,1);
+    renderer->SetViewport(0,0, 1,0.5);
+    // double dpi = 8000;
+    // const int extent[6] = {0, int(1242/dpi),0,int(375/dpi),0,0 };
+    // double focalpoint[3] = {0.07551017, 0.02256332, 1.};
+    // imageActor->SetDisplayExtent(extent);
+    // imageActor->SetPosition(focalpoint);
+    // imageActor->SetScale(1/dpi);
+    // imageActor->RotateX(180);
+    // imageActor->GetMapper()->SliceFacesCameraOn();
+    // imageActor->GetMapper()->SliceAtFocalPointOn();
+    // renderer->AddActor(imageActor);
+
+
     auto renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
     renderWindow->AddRenderer(renderer);
+    renderWindow->AddRenderer(imageRenderer);
+    renderWindow->SetSize(1600, 800);
 
     auto areaPicker = vtkSmartPointer<vtkAreaPicker>::New();
 
@@ -583,12 +729,18 @@ int main(){
     renderWindowInteractor->SetPicker(areaPicker);
 
     renderer->SetBackground(colors->GetColor3d("Black").GetData());
+    imageRenderer->SetBackground(colors->GetColor3d("Blue").GetData());
+
+    std::cout<<"image renderer: "<<imageRenderer<<std::endl;
+    std::cout<<"pc renderer: "<<renderer<<std::endl;
 
     // customs style
     auto style = vtkSmartPointer<InteractorStyle>::New();
     style->SetPoints(surfaceFilter->GetOutput());
     renderWindowInteractor->SetInteractorStyle(style);
     style->SetCurrentRenderer(renderer);
+    style->SetImageRenderer(imageRenderer);
+    style->SetPointCloudRenderer(renderer);
 
     auto textActor = vtkSmartPointer<vtkTextActor>::New();
     textActor->SetInput("VIEW");
@@ -597,18 +749,6 @@ int main(){
     textActor->GetTextProperty()->SetColor ( 1.0, 0.0, 0.0 );
     renderer->AddActor2D(textActor);
     style->SetTextActor(textActor);
-
-
-    // fd = fopen(storage_dir+"/gt.txt", "w");
-    // std::string storage_dir = ".";
-    // style->SetFile(storage_dir);
-
-    // vtkSmartPointer<vtkTextActor> textActor = vtkSmartPointer<vtkTextActor>::New();
-    // textActor->SetInput ( "Hello world" );
-    // textActor->SetPosition2 ( 10, 40 );
-    // textActor->GetTextProperty()->SetFontSize ( 24 );
-    // textActor->GetTextProperty()->SetColor ( 1.0, 0.0, 0.0 );
-    // renderer->AddActor2D ( textActor );
 
     renderWindowInteractor->Start();
 

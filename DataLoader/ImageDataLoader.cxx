@@ -3,6 +3,7 @@
 
 #include <vtkSmartPointer.h>
 #include <vtkImageViewer2.h>
+#include <vtkImageViewer.h>
 // #include <vtkJPEGReader.h>
 #include <vtkPNGReader.h>
 #include <vtkRenderWindow.h>
@@ -21,7 +22,7 @@ int main(int argc, char* argv[]){
     // jpegReader->SetFileName(filename.c_str());
     pngReader->SetFileName(argv[1]);
 
-    auto imageViewer = vtkSmartPointer<vtkImageViewer2>::New();
+    auto imageViewer = vtkSmartPointer<vtkImageViewer>::New();
     imageViewer->SetInputConnection(pngReader->GetOutputPort());
     auto renderWindowInteractor = vtkSmartPointer<vtkRenderWindowInteractor>::New();
     imageViewer->SetupInteractor(renderWindowInteractor);
