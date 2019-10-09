@@ -4,8 +4,10 @@
 #include <vector>
 #include <set>
 #include <cmath>
+#include <utility>
 
 // vtk library
+#include <vtkArrowSource.h>
 #include <vtkPlane.h>
 #include <vtkPNGReader.h>
 #include <vtkTransformPolyDataFilter.h>
@@ -39,12 +41,18 @@
 #include <vtkImageActor.h>
 #include <vtkImageMapper3D.h>
 #include <vtkImageMapper.h>
+#include <vtkWidgetCallbackMapper.h>
+#include <vtkWidgetEvent.h>
+#include <vtkCallbackCommand.h>
+#include <vtkAxesActor.h>
+#include <vtkArrowSource.h>
 
 // boxwidget
 #include <vtkBorderWidget.h>
 #include <vtkBoxWidget.h>
 #include <vtkCommand.h>
 #include <vtkTransform.h>
+#include <vtkBorderRepresentation.h>
 
 #include <vtkVersion.h>
 #include <vtkVertexGlyphFilter.h>
@@ -54,6 +62,8 @@
 #if VTK_VERSION_NUMBER >= 89000000000ULL
 #define VTK890 1
 #endif
+
+typedef std::pair<vtkSmartPointer<vtkBoxWidget>, vtkSmartPointer<vtkBorderWidget>> PairWidget;
 
 vtkSmartPointer<vtkVertexGlyphFilter> ReadPointCloudFromBin(std::string& filename){
     int32_t num = 1e6;
@@ -223,6 +233,34 @@ vtkSmartPointer <vtkImplicitBoolean> GenerateFrustum(double PT[4][3], double box
 
 }
 
+class vtkCustomBorderWidget: public vtkBorderWidget{
+    public:
+        static vtkCustomBorderWidget* New();
+        vtkTypeMacro(vtkCustomBorderWidget, vtkBorderWidget);
+        virtual void SelectRegion(double eventPos[2])override{
+            std::cout<<"vtkCustomBorderWidget"<<std::endl;
+            // this->RequestCursorShape(VTK_CURSOR_DEFAULT);
+        }
+};
+
+class vtkCustomBorderRepresentation: public vtkBorderRepresentation{
+    public:
+        static vtkCustomBorderRepresentation* New();
+        vtkTypeMacro(vtkCustomBorderRepresentation, vtkBorderRepresentation);
+
+        int ComputeInteractionState(int X, int Y, int modify=0){
+            vtkBorderRepresentation::ComputeInteractionState(X,Y, modify);
+            if(this->InteractionState==vtkBorderRepresentation::Inside){
+                this->InteractionState =vtkBorderRepresentation::Outside ;
+                this->UpdateShowBorder();
+                return this->InteractionState;
+            }
+        }
+
+
+};
+vtkStandardNewMacro(vtkCustomBorderWidget);
+vtkStandardNewMacro(vtkCustomBorderRepresentation);
 class InteractorStyle: public vtkInteractorStyleRubberBandPick{
     public:
         static InteractorStyle* New();
@@ -241,12 +279,14 @@ class InteractorStyle: public vtkInteractorStyleRubberBandPick{
             auto polyData = vtkSmartPointer<vtkPolyData>::New();
             int num_boxes = this->BoxWidgets.size();
             // dims, center and ry
-            double boxes_info[num_boxes][3+3+1];
+            int cols = 11;
+            double boxes_info[num_boxes][cols] = {0};
             std::cout<<"Write "<<num_boxes<<" data to disk in total. "<<std::endl;
             int i = 0;
             for (auto iterator=this->BoxWidgets.begin();iterator!=this->BoxWidgets.end();++iterator, ++i){
                 // for each boxwidget in storage
-                (*it)->GetPolyData(polyData);
+                // boxes_3d
+                (*it).first->GetPolyData(polyData);
                 int num_points = polyData->GetNumberOfPoints();
                 std::cout<<"num_points: "<<num_points<<std::endl;
                 double coords[num_points][3];
@@ -264,11 +304,22 @@ class InteractorStyle: public vtkInteractorStyleRubberBandPick{
                 boxes_info[i][5] = coords[14][2];
                 boxes_info[i][6] = 1.57;
 
+                // boxes_2d
+                auto *rep = it->second->GetBorderRepresentation();
+                if(rep){
+                    double *fpos1 = rep->GetPositionCoordinate()->GetValue();
+                    double *fpos2 = rep->GetPosition2Coordinate()->GetValue();
+                    boxes_info[i][7] = fpos1[0];
+                    boxes_info[i][8] = fpos1[1];
+                    boxes_info[i][9] = fpos2[0];
+                    boxes_info[i][10] = fpos2[1];
+                }
+
             }
             for(int i=0;i<num_boxes;i++){
-                for(int j=0;j<7;j++){
+                for(int j=0;j<cols;j++){
                     fprintf(fd, "%.4f", boxes_info[i][j]);
-                    if(j<6){
+                    if(j<cols-1){
                         fprintf(fd," ");
                     }
                 }
@@ -282,10 +333,10 @@ class InteractorStyle: public vtkInteractorStyleRubberBandPick{
             this->fd = fd;
         }
 
-        void SwitchFocus(std::set<vtkSmartPointer<vtkBoxWidget>>::iterator iterator){
+        void SwitchFocus(std::set<PairWidget>::iterator iterator){
             if(iterator==BoxWidgets.end())return;
             this->SelectedBoxWidget = *iterator;
-            this->SelectedActor = reinterpret_cast<vtkActor*>((this->SelectedBoxWidget->GetProp3D()));
+            this->SelectedActor = reinterpret_cast<vtkActor*>((this->SelectedBoxWidget.first->GetProp3D()));
             this->SelectedMapper = reinterpret_cast<vtkDataSetMapper*>(this->SelectedActor->GetMapper());
         }
 
@@ -307,8 +358,11 @@ class InteractorStyle: public vtkInteractorStyleRubberBandPick{
                 this->SelectedActor->SetMapper(this->SelectedMapper);
 
                 // init boxwidget
-                this->SelectedBoxWidget = vtkSmartPointer<vtkBoxWidget>::New();
-                this->SelectedBoxWidget->KeyPressActivationOff();
+                auto SelectedBoxWidget = vtkSmartPointer<vtkBoxWidget>::New();
+                SelectedBoxWidget->KeyPressActivationOff();
+                auto SelectedBorderWidget = vtkSmartPointer<vtkBorderWidget>::New();
+
+                this->SelectedBoxWidget = std::make_pair(SelectedBoxWidget, SelectedBorderWidget);
             }
             // otherwise dont need to allocate new memory
         }
@@ -319,6 +373,10 @@ class InteractorStyle: public vtkInteractorStyleRubberBandPick{
             if(polyData){
                 polyData->Initialize();
             }
+            //set off to widgets
+            this->SelectedBoxWidget.first->Off();
+            this->PrintCurrentVisibleBox("CleareCurrentSelection");
+            this->SelectedBoxWidget.second->Off();
         }
 
         bool IsValidBox(){
@@ -354,11 +412,80 @@ class InteractorStyle: public vtkInteractorStyleRubberBandPick{
         }
 
         void PlaceBoxWidget(){
-            this->SelectedBoxWidget->SetInteractor(this->GetInteractor());
-            this->SelectedBoxWidget->SetProp3D(this->SelectedActor);
-            this->SelectedBoxWidget->SetPlaceFactor(1.25);
-            this->SelectedBoxWidget->PlaceWidget();
-            this->SelectedBoxWidget->Off();
+            this->SelectedBoxWidget.first->SetInteractor(this->GetInteractor());
+            this->SelectedBoxWidget.first->SetDefaultRenderer(this->PointCloudRenderer);
+            this->SelectedBoxWidget.first->SetProp3D(this->SelectedActor);
+            this->SelectedBoxWidget.first->SetPlaceFactor(1.25);
+            this->SelectedBoxWidget.first->PlaceWidget();
+            this->SelectedBoxWidget.first->Off();
+
+            auto arrowSource = vtkSmartPointer<vtkArrowSource>::New();
+            auto arrowMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+            auto arrowActor = vtkSmartPointer<vtkActor>::New();
+            arrowActor->SetScale(3);
+            arrowActor->RotateY(90);
+            arrowMapper->SetInputConnection(arrowSource->GetOutputPort());
+            arrowActor->SetMapper(arrowMapper);
+            double position[3];
+            auto polyData = vtkSmartPointer<vtkPolyData>::New();
+            this->SelectedBoxWidget.first->GetPolyData(polyData);
+            polyData->GetPoint(polyData->GetNumberOfPoints()-1, position);
+            std::cout<<position[0]<<" "<<position[1]<<" "<<position[2]<<std::endl;
+            arrowActor->SetPosition(position);
+            this->PointCloudRenderer->AddActor(arrowActor);
+        }
+
+        void ComputeBorderWidgetPosition(double *position, double* position2){
+            int X = this->StartPosition[0];
+            int Y = this->StartPosition[1];
+            double XF = static_cast<double>(X);
+            double YF = static_cast<double>(Y);
+            this->CurrentRenderer->DisplayToNormalizedDisplay(XF,YF);
+            this->CurrentRenderer->NormalizedDisplayToViewport(XF,YF);
+            this->CurrentRenderer->ViewportToNormalizedViewport(XF,YF);
+            position[0] = XF;
+            position[1] = YF;
+
+            X = this->EndPosition[0];
+            Y = this->EndPosition[1];
+            XF = static_cast<double>(X);
+            YF = static_cast<double>(Y);
+            this->CurrentRenderer->DisplayToNormalizedDisplay(XF,YF);
+            this->CurrentRenderer->NormalizedDisplayToViewport(XF,YF);
+            this->CurrentRenderer->ViewportToNormalizedViewport(XF,YF);
+            position2[0] = XF;
+            position2[1] = YF;
+
+            double tmp = position[1];
+            position[1] = position2[1];
+            position2[1] = tmp;
+            // position2 is offset reference to position
+            position2[0] = position2[0] - position[0];
+            position2[1] = position2[1] - position[1];
+        }
+
+        void PlaceBorderWidget(){
+            this->SelectedBoxWidget.second->SetInteractor(this->GetInteractor());
+            this->SelectedBoxWidget.second->SetDefaultRenderer(this->ImageRenderer);
+            // this->StartPosition
+            this->SelectedBoxWidget.second->CreateDefaultRepresentation();
+            // auto rep = this->SelectedBorderWidget->GetBorderRepresentation();
+            auto rep = vtkSmartPointer<vtkCustomBorderRepresentation>::New();
+            this->SelectedBoxWidget.second->SetRepresentation(rep);
+
+            // set position
+            double position[2];
+            double position2[2];
+            this->ComputeBorderWidgetPosition(position, position2);
+            rep->SetPosition(position);
+            rep->SetPosition2(position2);
+            std::cout<<"position: "<<position[0]<<" "<<position[1]<<std::endl;
+            std::cout<<"position2: "<<position2[0]<<" "<<position2[1]<<std::endl;
+            // rep->MovingOff();
+            // rep->Print(std::cout);
+            this->SelectedBoxWidget.second->SelectableOff();
+            this->SelectedBoxWidget.second->KeyPressActivationOff();
+            this->SelectedBoxWidget.second->On();
         }
 
         virtual void  OnRightButtonUp()override{
@@ -375,9 +502,7 @@ class InteractorStyle: public vtkInteractorStyleRubberBandPick{
             // update current iterator
             this->it = this->BoxWidgets.find(this->SelectedBoxWidget);
             // add actor
-            this->CurrentRenderer->AddActor(this->SelectedActor);
-            // color back to the green(deactivate state)
-            // this->SelectedActor->GetProperty()->SetColor(Colors->GetColor3d("Green").GetData());
+            this->PointCloudRenderer->AddActor(this->SelectedActor);
         }
 
         bool IncreaseIteratorRecurrent(){
@@ -407,14 +532,19 @@ class InteractorStyle: public vtkInteractorStyleRubberBandPick{
                     // reset to the first one
                     this->it = this->BoxWidgets.begin();
                 }
-                this->CurrentRenderer->RemoveActor((*it)->GetProp3D());
+                this->PointCloudRenderer->RemoveActor((*it).first->GetProp3D());
+                // close first
+                it->first->Off();
+                this->PrintCurrentVisibleBox("RemoveBox");
+                it->second->Off();
+                // them remove them from storage
                 this->BoxWidgets.erase(it);
             }
         }
 
         void HandleCurrentSelection(){
             // if null
-            if(!this->SelectedBoxWidget and !this->SelectedActor){
+            if(!this->SelectedActor){
                 return;
             }
             if(IsValidBox()){
@@ -427,8 +557,10 @@ class InteractorStyle: public vtkInteractorStyleRubberBandPick{
         }
 
         void PrintCurrentVisibleBox(std::string callerStack){
-            std::cout<<"["<<callerStack <<"] num of Actor in CurrentRenderer: "
-                <<this->CurrentRenderer->VisibleActorCount()<<std::endl;
+            std::cout<<"["<<callerStack <<"] num of Actor in ImageRenderer: "
+                <<this->ImageRenderer->VisibleActorCount()<<std::endl;
+            std::cout<<"["<<callerStack <<"] num of Actor in PointCloudRenderer: "
+                <<this->PointCloudRenderer->VisibleActorCount()<<std::endl;
             std::cout<<"["<<callerStack <<"] num of box in BoxWidgets: "
                 <<this->BoxWidgets.size()<<std::endl;
 
@@ -436,18 +568,22 @@ class InteractorStyle: public vtkInteractorStyleRubberBandPick{
 
         void ToggleDisplayAllBoxes(){
             bool enabled;
-            enabled = this->SelectedBoxWidget->GetEnabled();
+            enabled = this->SelectedBoxWidget.first->GetEnabled();
             if(enabled){
-                this->SelectedBoxWidget->Off();
+                this->SelectedBoxWidget.first->Off();
+                this->SelectedBoxWidget.second->Off();
             }else{
-                this->SelectedBoxWidget->On();
+                this->SelectedBoxWidget.first->On();
+                this->SelectedBoxWidget.second->On();
             }
             for(auto it = this->BoxWidgets.begin();it!=this->BoxWidgets.end();it++){
                 // for each boxwidget in storage
                 if(enabled){
-                    (*it)->Off();
+                    (*it).first->Off();
+                    (*it).second->Off();
                 }else{
-                    (*it)->On();
+                    (*it).first->On();
+                    (*it).second->On();
                 }
             }
         }
@@ -455,7 +591,7 @@ class InteractorStyle: public vtkInteractorStyleRubberBandPick{
 
 
         virtual void OnChar()override{
-            auto renderer = this->GetCurrentRenderer();
+            auto renderer = this->PointCloudRenderer;
             auto camera = renderer->GetActiveCamera();
             auto key = this->Interactor->GetKeyCode();
             std::cout<<"Pressed: "<<key<<std::endl;
@@ -508,9 +644,6 @@ class InteractorStyle: public vtkInteractorStyleRubberBandPick{
             }
             textActor->SetInput(flag.c_str());
         }
-        // void ExtractPoints(){
-        // this->ExtractPoints(this->Points);
-        // }
 
         void ExtractPoints(vtkPolyData* polyData, vtkImplicitFunction* selectedRegion){
             auto extractGeometry = vtkSmartPointer<vtkExtractGeometry>::New();
@@ -529,8 +662,7 @@ class InteractorStyle: public vtkInteractorStyleRubberBandPick{
             this->SelectedMapper->ScalarVisibilityOff();
             this->SelectedActor->GetProperty()->SetPointSize(3);
 
-            this->AddBox();
-            this->PlaceBoxWidget();
+
         }
 
         void PickActor(){
@@ -543,7 +675,7 @@ class InteractorStyle: public vtkInteractorStyleRubberBandPick{
                 // std::cout<<"Current Actor: "<<this->SelectedActor <<std::endl;
                 auto pickedIterator = BoxWidgets.end();
                 for(auto it=this->BoxWidgets.begin();it!=this->BoxWidgets.end();it++){
-                    if((*it)->GetProp3D()==pickedActor){
+                    if((*it).first->GetProp3D()==pickedActor){
                         pickedIterator = it;
                         break;
                     }
@@ -566,7 +698,7 @@ class InteractorStyle: public vtkInteractorStyleRubberBandPick{
 
         void UpdateRender(){
             for(auto it=this->BoxWidgets.begin();it!=this->BoxWidgets.end();it++){
-                reinterpret_cast<vtkActor*>((*it)->GetProp3D())->GetProperty()
+                reinterpret_cast<vtkActor*>((*it).first->GetProp3D())->GetProperty()
                     ->SetColor(Colors->GetColor3d("Green").GetData());
             }
             this->SelectedActor->GetProperty()->SetColor(Colors->GetColor3d("Red").GetData());
@@ -584,16 +716,17 @@ class InteractorStyle: public vtkInteractorStyleRubberBandPick{
             }else{
 
                 vtkSmartPointer<vtkImplicitFunction> frustum_deepcopy;
-                if(this->GetCurrentRenderer()==this->ImageRenderer){
+                bool IsImageEvent = this->GetCurrentRenderer()==this->ImageRenderer;
+                if(IsImageEvent){
                     std::cout<<"Over Image Region "<<std::endl;
-                    this->SetCurrentRenderer(this->PointCloudRenderer);
+                    // this->SetCurrentRenderer(this->PointCloudRenderer);
                     int windowSize[2];
                     this->GetInteractor()->GetSize(windowSize);
                     double scales[2] = {windowSize[0]/1242.0,windowSize[1]/2.0/375.0};
                     double box[4] = {double(this->StartPosition[0])/scales[0],
-                                    double(windowSize[1]-this->StartPosition[1])/scales[1],
-                                    double(this->EndPosition[0])/scales[0],
-                                    double(windowSize[1]-this->EndPosition[1])/scales[1]};
+                        double(windowSize[1]-this->StartPosition[1])/scales[1],
+                        double(this->EndPosition[0])/scales[0],
+                        double(windowSize[1]-this->EndPosition[1])/scales[1]};
                     std::cout<<"Selected Region "<<box[0]<<" "<<box[1]<<" "<<box[2]<<" "<<box[3]<<std::endl;
                     std::cout<<"Window Size: "<<windowSize[0]<<" "<<windowSize[1]<<std::endl;
                     double PT[4][3] = {{7.070493000000e+02,0,0},
@@ -631,6 +764,12 @@ class InteractorStyle: public vtkInteractorStyleRubberBandPick{
                         std::cout<<"Cannot execute union operator due to selection from invalid polydata. "<<std::endl;
                     }
                 }
+                this->AddBox();
+                this->PlaceBoxWidget();
+                if(IsImageEvent){
+                    // if it happened in point cloud viewport, not necessary to draw box
+                    this->PlaceBorderWidget();
+                }
             }
             PrintCurrentVisibleBox("OnLeftButtonUp");
             UpdateRender();
@@ -649,20 +788,24 @@ class InteractorStyle: public vtkInteractorStyleRubberBandPick{
         vtkSmartPointer<vtkPolyData> Points;
         vtkSmartPointer<vtkActor> SelectedActor;
         vtkSmartPointer<vtkDataSetMapper> SelectedMapper;
-        vtkSmartPointer<vtkBoxWidget> SelectedBoxWidget;
-        std::set<vtkSmartPointer<vtkBoxWidget>> BoxWidgets;
-        std::set<vtkSmartPointer<vtkBorderWidget>> BorderWidgets;
+        PairWidget SelectedBoxWidget;
+        // vtkSmartPointer<vtkBorderWidget> SelectedBorderWidget;
+        std::set<PairWidget> BoxWidgets;
+        // std::set<vtkSmartPointer<vtkBorderWidget>> BorderWidgets;
 
         vtkSmartPointer<vtkTextActor> textActor;
         FILE* fd;
 
-        std::set<vtkSmartPointer<vtkBoxWidget>>::iterator it;
+        std::set<PairWidget>::iterator it;
         vtkSmartPointer<vtkNamedColors> Colors;
         vtkSmartPointer<vtkRenderer> ImageRenderer;
         vtkSmartPointer<vtkRenderer> PointCloudRenderer;
 };
 
 vtkStandardNewMacro(InteractorStyle);
+
+
+
 
 int main(){
     auto colors = vtkSmartPointer<vtkNamedColors>::New();
@@ -742,6 +885,7 @@ int main(){
     style->SetImageRenderer(imageRenderer);
     style->SetPointCloudRenderer(renderer);
 
+    // text actor
     auto textActor = vtkSmartPointer<vtkTextActor>::New();
     textActor->SetInput("VIEW");
     textActor->SetPosition2( 10, 40 );
@@ -749,6 +893,26 @@ int main(){
     textActor->GetTextProperty()->SetColor ( 1.0, 0.0, 0.0 );
     renderer->AddActor2D(textActor);
     style->SetTextActor(textActor);
+    // axis actor
+    auto axis = vtkSmartPointer<vtkAxesActor>::New();
+    renderer->AddActor(axis);
+
+    // arrow actor
+    // auto arrowSource = vtkSmartPointer<vtkArrowSource>::New();
+    // auto arrowMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    // auto arrowActor = vtkSmartPointer<vtkActor>::New();
+    // arrowMapper->SetInputConnection(arrowSource->GetOutputPort());
+    // arrowActor->SetMapper(arrowMapper);
+    // renderer->AddActor(arrowActor);
+
+
+    // auto borderWidget = vtkSmartPointer<vtkCustomBorderWidget>::New();
+    // borderWidget->SetInteractor(renderWindowInteractor);
+    // borderWidget->CreateDefaultRepresentation();
+    // auto rep = vtkSmartPointer<vtkCustomBorderRepresentation>::New();
+    // borderWidget->SetRepresentation(rep);
+    // borderWidget->SelectableOn();
+    // borderWidget->Off();
 
     renderWindowInteractor->Start();
 
