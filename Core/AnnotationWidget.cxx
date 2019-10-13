@@ -1,12 +1,11 @@
 #include "AnnotationWidget.h"
 #include "AnnotationStyle.h"
 
-// vtkSmartPointer<vtkRenderer> AnnotationWidget::PointCloudRenderer;
-// vtkSmartPointer<vtkRenderer> AnnotationWidget::ImageRenderer;
-// vtkSmartPointer<vtkRenderWindowInteractor> AnnotationWidget::Interactor;
-// vtkSmartPointer<vtkNamedColors> AnnotationWidget::Colors = vtkSmartPointer<vtkNamedColors>::New();
-
 AnnotationWidget::AnnotationWidget(){
+    // set state first
+    BorderWidgetEnabled = false;
+    BoxWidgetEnabled = false;
+
     // points actor
     PointsMapper = vtkSmartPointer<vtkDataSetMapper>::New();
     // important !
@@ -51,13 +50,29 @@ void AnnotationWidget::Initialize(AnnotationStyle* style){
 
 
 void AnnotationWidget::Off(){
+    // box 3d
+    // if(BoxWidgetEnabled){
     this->AnnotationBoxWidget->Off();
+    // }
+
+    // box 2d
+    // if(BorderWidgetEnabled){
     this->AnnotationBorderWidget->Off();
+    // }
+    // arrow
+    this->PointCloudRenderer->RemoveActor(this->ArrowActor);
 }
 
 void AnnotationWidget::On(){
-    this->AnnotationBoxWidget->On();
-    this->AnnotationBorderWidget->On();
+    if(BoxWidgetEnabled){
+        this->AnnotationBoxWidget->On();
+    }
+
+    if(BorderWidgetEnabled){
+        this->AnnotationBorderWidget->On();
+    }
+    // arrow
+    this->PointCloudRenderer->AddActor(this->ArrowActor);
 }
 
 void AnnotationWidget::Clear(){
@@ -74,11 +89,13 @@ void AnnotationWidget::Clear(){
         this->PointCloudRenderer->RemoveActor(this->ArrowActor);
     }
     //set off to widgets
+    BoxWidgetEnabled = false;
+    BorderWidgetEnabled = false;
     this->Off();
 }
 
 bool AnnotationWidget::GetEnabled(){
-    return this->AnnotationBoxWidget->GetEnabled() and this->AnnotationBorderWidget->GetEnabled();
+    return this->AnnotationBoxWidget->GetEnabled() or this->AnnotationBorderWidget->GetEnabled();
 }
 
 bool AnnotationWidget::IsValidBox(){
@@ -88,6 +105,8 @@ bool AnnotationWidget::IsValidBox(){
 
 void AnnotationWidget::PlaceAnnotationBoxWidget(){
     // Box
+
+    BoxWidgetEnabled = true;
     this->AnnotationBoxWidget->SetProp3D(this->PointsActor);
     this->AnnotationBoxWidget->SetPlaceFactor(1.25);
     this->AnnotationBoxWidget->PlaceWidget();
@@ -107,6 +126,7 @@ void AnnotationWidget::PlaceArrowActor(){
 }
 
 void AnnotationWidget::PlaceAnnotationBorderWidget(double* position, double* position2){
+    BorderWidgetEnabled = true;
     this->AnnotationBorderWidget->CreateDefaultRepresentation();
     auto rep = vtkSmartPointer<vtkCustomBorderRepresentation>::New();
     this->AnnotationBorderWidget->SetRepresentation(rep);

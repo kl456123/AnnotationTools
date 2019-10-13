@@ -12,8 +12,8 @@ class vtkCustomBorderRepresentation: public vtkBorderRepresentation{
             if(this->InteractionState==vtkBorderRepresentation::Inside){
                 this->InteractionState =vtkBorderRepresentation::Outside ;
                 this->UpdateShowBorder();
-                return this->InteractionState;
             }
+            return this->InteractionState;
         }
 
 

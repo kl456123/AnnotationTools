@@ -51,7 +51,7 @@ vtkSmartPointer <vtkImplicitBoolean> GenerateFrustum(double PT[4][3], double box
 
 }
 AnnotationStyle::AnnotationStyle(){
-    this->fd = fopen("./gt.txt", "w");
+    // set dataloader
 }
 
 void AnnotationStyle::WriteDataToDisK(){
@@ -106,10 +106,6 @@ void AnnotationStyle::WriteDataToDisK(){
     // fprintf(fd, "\n");
     // }
     // }
-}
-
-void AnnotationStyle::SetFile(FILE* fd){
-    this->fd = fd;
 }
 
 void AnnotationStyle::SwitchFocus(std::set<vtkSmartPointer<AnnotationWidget>>::iterator iterator){
@@ -283,11 +279,32 @@ void AnnotationStyle::OnChar(){
 
         // switch among boxwigets
         SwitchFocus();
+    }else if(keySym=="Right"){
+        this->SelectedWidget->HorizontalRotateClockwise(AngleAdjustPrecision);
+    }else if(keySym=="Left"){
+        this->SelectedWidget->HorizontalRotateUnClockwise(AngleAdjustPrecision);
+    }else if(keySym=="Up"){
+        this->RemoveAllFromPointCloudRenderer();
+        this->RemoveAllFromImageRenderer();
+        this->AnnotationWidgets.clear();
+        this->ResetCurrentSelection();
+        this->AnnotationDataloader->LoadPrev();
+    }else if(keySym=="Down"){
+        // remove all actor first
+        this->RemoveAllFromPointCloudRenderer();
+        this->RemoveAllFromImageRenderer();
+        // remove all widget
+        this->AnnotationWidgets.clear();
+
+        // reset current
+        this->ResetCurrentSelection();
+        this->AnnotationDataloader->LoadNext();
     }
     if(key=='q' or key=='Q'){
         // write data to disk
         this->WriteDataToDisK();
     }
+    std::cout<<"key: "<<keySym<<std::endl;
     vtkInteractorStyleRubberBandPick::OnChar();
     switch(key){
         case 'h':
@@ -306,6 +323,8 @@ void AnnotationStyle::OnChar(){
         case 'r':
             // switch text
             this->ToggleText();
+            break;
+        case 'a':
             break;
     }
     UpdateRender();

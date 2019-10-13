@@ -22,5 +22,6 @@ message(STATUS "VTK_VERSION: ${VTK_VERSION}")
 message(STATUS "VTK_LIBRARIES: ${VTK_LIBRARIES}")
 
 
-add_library(AnnotationCore ${Module_SRCS})
-target_link_libraries(AnnotationCore ${VTK_LIBRARIES} DataLoader)
+include_directories(../Core)
+add_library(DataLoader ${Module_SRCS})
+target_link_libraries(DataLoader ${VTK_LIBRARIES})

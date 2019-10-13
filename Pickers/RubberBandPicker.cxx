@@ -59,6 +59,7 @@
 #include <vtkPropPicker.h>
 
 #include "AnnotationStyle.h"
+#include "DataLoader.h"
 
 #if VTK_VERSION_NUMBER >= 89000000000ULL
 #define VTK890 1
@@ -159,40 +160,44 @@ vtkSmartPointer<vtkActor2D> ReadImageFromPNGFile(std::string& filename){
 
 int main(){
     auto colors = vtkSmartPointer<vtkNamedColors>::New();
-    std::string filename = "/home/breakpoint/Data/2011_09_26/2011_09_26_drive_0001_sync/velodyne_points/data/0000000000.bin";
+    // std::string filename = "/home/breakpoint/Data/2011_09_26/2011_09_26_drive_0001_sync/velodyne_points/data/0000000000.bin";
 
-    auto glyphFilter = ReadPointCloudFromBin(filename);
+    // auto glyphFilter = ReadPointCloudFromBin(filename);
 
-    auto idFilter = vtkSmartPointer<vtkIdFilter>::New();
-    idFilter->SetInputConnection(glyphFilter->GetOutputPort());
-#if VTK890
-    idFilter->SetCellIdsArrayName("OriginalIds");
-    idFilter->SetPointIdsArrayName("OriginalIds");
-#else
-    idFilter->SetIdsArrayName("OriginalIds");
-#endif
-    idFilter->Update();
+    // auto idFilter = vtkSmartPointer<vtkIdFilter>::New();
+    // idFilter->SetInputConnection(glyphFilter->GetOutputPort());
+// #if VTK890
+    // idFilter->SetCellIdsArrayName("OriginalIds");
+    // idFilter->SetPointIdsArrayName("OriginalIds");
+// #else
+    // idFilter->SetIdsArrayName("OriginalIds");
+// #endif
+    // idFilter->Update();
 
-    auto surfaceFilter=vtkSmartPointer<vtkDataSetSurfaceFilter>::New();
-    surfaceFilter->SetInputConnection(idFilter->GetOutputPort());
-    surfaceFilter->Update();
+    // auto surfaceFilter=vtkSmartPointer<vtkDataSetSurfaceFilter>::New();
+    // surfaceFilter->SetInputConnection(idFilter->GetOutputPort());
+    // surfaceFilter->Update();
 
-    auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    mapper->SetInputConnection(surfaceFilter->GetOutputPort());
-    // mapper->SetInputConnection(glyphFilter->GetOutputPort());
-    mapper->ScalarVisibilityOff();
+    // auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    // mapper->SetInputConnection(surfaceFilter->GetOutputPort());
+    // // mapper->SetInputConnection(glyphFilter->GetOutputPort());
+    // mapper->ScalarVisibilityOff();
 
-    auto actor = vtkSmartPointer<vtkActor>::New();
-    actor->SetMapper(mapper);
+    // auto actor = vtkSmartPointer<vtkActor>::New();
+    // actor->SetMapper(mapper);
+
+    std::string root_dir = "/home/breakpoint/Data/2011_09_26/2011_09_26_drive_0001_sync";
+    auto AnnotationDataloader = vtkSmartPointer<DataLoader>::New();
+    AnnotationDataloader->Initialize(root_dir);
 
     auto renderer = vtkSmartPointer<vtkRenderer>::New();
-    renderer->AddActor(actor);
+    renderer->AddActor(AnnotationDataloader->GetPointCloudActor());
 
     // image actor
     std::string imageFileName = "/home/breakpoint/Data/2011_09_26/2011_09_26_drive_0001_sync/image_02/data/0000000000.png";
-    auto imageActor = ReadImageFromPNGFile(imageFileName);
+    // auto imageActor = ReadImageFromPNGFile(imageFileName);
     auto imageRenderer = vtkSmartPointer<vtkRenderer>::New();
-    imageRenderer->AddActor(imageActor);
+    imageRenderer->AddActor(AnnotationDataloader->GetImageActor());
     imageRenderer->SetViewport(0,0.5, 1,1);
     renderer->SetViewport(0,0, 1,0.5);
 
@@ -216,11 +221,13 @@ int main(){
 
     // customs style
     auto style = vtkSmartPointer<AnnotationStyle>::New();
-    style->SetPoints(surfaceFilter->GetOutput());
+    style->SetPoints(AnnotationDataloader->GetPoints());
     renderWindowInteractor->SetInteractorStyle(style);
+    // set renderer and dataloader
     style->SetCurrentRenderer(renderer);
     style->SetImageRenderer(imageRenderer);
     style->SetPointCloudRenderer(renderer);
+    style->SetDataLoader(AnnotationDataloader);
     // set the first
     style->InitAnnotationWidget();
 

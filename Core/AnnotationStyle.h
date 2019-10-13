@@ -61,6 +61,9 @@
 #include <vtkPropPicker.h>
 
 #include "AnnotationWidget.h"
+#include "Blob.h"
+
+#include "DataLoader.h"
 
 
 
@@ -79,7 +82,6 @@ class AnnotationStyle: public vtkInteractorStyleRubberBandPick{
             this->SelectedWidget->Initialize(this);
         }
         void WriteDataToDisK();
-        void SetFile(FILE* fd);
 
         void SwitchFocus(std::set<vtkSmartPointer<AnnotationWidget>>::iterator iterator);
 
@@ -88,6 +90,24 @@ class AnnotationStyle: public vtkInteractorStyleRubberBandPick{
 
         void ClearCurrentSelection(){
             this->SelectedWidget->Clear();
+        }
+
+        void Save(){
+            if(this->AnnotationWidgets.size()==0){
+                return ;
+            }
+            auto it = this->AnnotationWidgets.begin();
+            auto widget = *it;
+            int numOfFeatures = widget->GetNumOfFeatures();
+            Blob blob(numOfFeatures);
+            for(it = this->AnnotationWidgets.begin();it!=this->AnnotationWidgets.end();it++){
+                // for each boxwidget in storage
+                widget = *it;
+                double info[numOfFeatures];
+                widget->GetInfo(info);
+                blob.AddSample(info);
+            }
+            this->AnnotationDataloader->Save(&blob);
         }
 
         void ResetHorizontalView(vtkCamera* camera);
@@ -118,6 +138,18 @@ class AnnotationStyle: public vtkInteractorStyleRubberBandPick{
         virtual void OnChar()override;
         void SetTextActor(vtkTextActor* textActor);
 
+        void RemoveAllFromPointCloudRenderer(){
+            // remove all other than itself
+            this->PointCloudRenderer->RemoveAllViewProps();
+            this->PointCloudRenderer->AddActor(this->AnnotationDataloader->GetPointCloudActor());
+        }
+
+        void RemoveAllFromImageRenderer(){
+            // remove all other than itself
+            this->ImageRenderer->RemoveAllViewProps();
+            this->ImageRenderer->AddActor(this->AnnotationDataloader->GetImageActor());
+        }
+
         void ToggleText();
         void ExtractPoints(vtkPolyData* polyData, vtkImplicitFunction* selectedRegion);
 
@@ -146,6 +178,10 @@ class AnnotationStyle: public vtkInteractorStyleRubberBandPick{
         vtkRenderer* GetImageRenderer(){
             return ImageRenderer;
         }
+
+        void SetDataLoader(DataLoader* dataloader){
+            AnnotationDataloader = dataloader;
+        }
     private:
         vtkSmartPointer<vtkPolyData> Points;
         std::set<vtkSmartPointer<AnnotationWidget>> AnnotationWidgets;
@@ -156,8 +192,9 @@ class AnnotationStyle: public vtkInteractorStyleRubberBandPick{
         std::set<vtkSmartPointer<AnnotationWidget>>::iterator it;
         vtkSmartPointer<vtkRenderer> ImageRenderer;
         vtkSmartPointer<vtkRenderer> PointCloudRenderer;
+        vtkSmartPointer<DataLoader> AnnotationDataloader;
 
-        FILE* fd;
+        double AngleAdjustPrecision=5;
 };
 
 
