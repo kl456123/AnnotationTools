@@ -1,4 +1,4 @@
-# AnnotationTool
+# AnnotationTool(c++ version)
 
 ## Introduction
 
@@ -33,8 +33,6 @@ make -j8
 
 ## How to
 ### Some Keybindings
-* "k"
-* "s"
 * "Tab", switch among 3d bbox
 * "q", quit, note that it will save data before quit
 * "h", horizontal view in pointcloud
@@ -54,6 +52,10 @@ make -j8
     - label_2
 * all annotation data will saved into label_2 using txt format,
 all filenames of annotation is according to the filenames of data.(the prefix name is the same)
+
+### Demo Image
+![](./Images/Screenshot from 2019-10-14 16-02-39.png)
+![](./Images/Screenshot from 2019-10-14 16-02-58.png)
 
 
 ## Development
