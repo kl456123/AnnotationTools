@@ -113,7 +113,6 @@ class AnnotationWidget: public vtkObjectBase{
             GetDims(infoOffset);
             infoOffset+=3;
             GetOrientation(infoOffset);
-            infoOffset+=1;
         }
 
         void Get2DInfo(double* info){
@@ -121,15 +120,29 @@ class AnnotationWidget: public vtkObjectBase{
             // double position[2];
             // double position2[2];
             auto rep = this->AnnotationBorderWidget->GetBorderRepresentation();
-            auto position = rep->GetPosition();
-            auto position2 = rep->GetPosition2();
+            if(rep){
+                auto position = rep->GetPosition();
+                auto position2 = rep->GetPosition2();
 
-            // normalized coords
-            double tmp = position[1];
-            position[1] = position2[1];
-            position2[1] = tmp;
-            position[1] = 1 - position[1];
-            position2[1] = 1- position2[1];
+                // normalized coords
+                double tmp = position[1];
+                position[1] = position2[1];
+                position2[1] = tmp;
+                position[1] = 1 - position[1];
+                position2[1] = 1- position2[1];
+
+                // copy
+                info[0] = position[0];
+                info[1] = position[1];
+                info[2] = position2[0];
+                info[3] = position2[1];
+            }else{
+                info[0] = 0 ;
+                info[1] = 0;
+                info[2] = 0;
+                info[3] = 0;
+            }
+
         }
 
         void GetInfo(double* info){

@@ -50,11 +50,11 @@ vtkSmartPointer <vtkImplicitBoolean> GenerateFrustum(double PT[4][3], double box
     return planes;
 
 }
-AnnotationStyle::AnnotationStyle(){
+// AnnotationStyle::AnnotationStyle(){
     // set dataloader
-}
+// }
 
-void AnnotationStyle::WriteDataToDisK(){
+// void AnnotationStyle::WriteDataToDisK(){
     // auto polyData = vtkSmartPointer<vtkPolyData>::New();
     // int num_boxes = this->AnnotationWidgets.size();
     // // dims, center and ry
@@ -106,7 +106,7 @@ void AnnotationStyle::WriteDataToDisK(){
     // fprintf(fd, "\n");
     // }
     // }
-}
+// }
 
 void AnnotationStyle::SwitchFocus(std::set<vtkSmartPointer<AnnotationWidget>>::iterator iterator){
     if(iterator==AnnotationWidgets.end())return;
@@ -264,6 +264,23 @@ void AnnotationStyle::PrintCurrentVisibleBox(std::string callerStack){
 
 }
 
+void AnnotationStyle::OffAllBoxes(){
+    for(auto it = this->AnnotationWidgets.begin();it!=this->AnnotationWidgets.end();it++){
+        auto widget = *it;
+        widget->Off();
+    }
+}
+
+void AnnotationStyle::ClearCurrentFrame(){
+    // clear image and pointcloud, prepare for loading next frame
+    // should off all boxes first otherwise program will crash
+    this->OffAllBoxes();
+    this->AnnotationWidgets.clear();
+    this->RemoveAllFromPointCloudRenderer();
+    this->RemoveAllFromImageRenderer();
+    this->ResetCurrentSelection();
+}
+
 
 
 void AnnotationStyle::OnChar(){
@@ -276,7 +293,6 @@ void AnnotationStyle::OnChar(){
         PrintCurrentVisibleBox("Pressing Tab");
         // handle current box first
         HandleCurrentSelection();
-
         // switch among boxwigets
         SwitchFocus();
     }else if(keySym=="Right"){
@@ -284,25 +300,16 @@ void AnnotationStyle::OnChar(){
     }else if(keySym=="Left"){
         this->SelectedWidget->HorizontalRotateUnClockwise(AngleAdjustPrecision);
     }else if(keySym=="Up"){
-        this->RemoveAllFromPointCloudRenderer();
-        this->RemoveAllFromImageRenderer();
-        this->AnnotationWidgets.clear();
-        this->ResetCurrentSelection();
+        this->ClearCurrentFrame();
         this->AnnotationDataloader->LoadPrev();
     }else if(keySym=="Down"){
-        // remove all actor first
-        this->RemoveAllFromPointCloudRenderer();
-        this->RemoveAllFromImageRenderer();
-        // remove all widget
-        this->AnnotationWidgets.clear();
-
-        // reset current
-        this->ResetCurrentSelection();
+        this->ClearCurrentFrame();
         this->AnnotationDataloader->LoadNext();
     }
     if(key=='q' or key=='Q'){
         // write data to disk
-        this->WriteDataToDisK();
+        // this->WriteDataToDisK();
+        this->Save();
     }
     std::cout<<"key: "<<keySym<<std::endl;
     vtkInteractorStyleRubberBandPick::OnChar();

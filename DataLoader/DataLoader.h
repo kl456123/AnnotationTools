@@ -56,6 +56,9 @@ class DataLoader: public vtkObjectBase{
         string GetCalibDir(){
             return this->root_dir + "/calib";
         }
+        string GetAnnotationDir(){
+            return this->root_dir + "/label_2";
+        }
 
         string GetImagePath(int fileIndex){
             return GetImageDir()+"/" + filenames[fileIndex]+".png";
@@ -67,9 +70,15 @@ class DataLoader: public vtkObjectBase{
         string GetCalibPath(int fileIndex){
             return GetCalibDir()+ "/"+filenames[fileIndex] + ".txt";
         }
+        string GetAnnotationPath(int fileIndex){
+            return GetAnnotationDir()+"/"+filenames[fileIndex]+".txt";
+        }
+
+
 
         void ReadFileNamesFromTXT(string txt){
             FILE* txt_fd = fopen(txt.c_str(), "r");
+            fclose(txt_fd);
         }
 
         bool CheckFileIndex(int fileIndex){
@@ -92,8 +101,13 @@ class DataLoader: public vtkObjectBase{
             ImageReader->SetFileName(fn.c_str());
         }
 
+
+
         void LoadPointCloud(string fn);
 
+        void LoadAnnotation(string fn){
+            this->fd = fopen(fn.c_str(), "w");
+        }
         void Load(int fileIndex){
 
             if(!CheckFileIndex(FileIndex)){return;}
@@ -103,6 +117,9 @@ class DataLoader: public vtkObjectBase{
             LoadImage(GetImagePath(fileIndex));
             //velodyne
             LoadPointCloud(GetPointCloudPath(fileIndex));
+
+            // load annotation if any
+            LoadAnnotation(GetAnnotationPath(fileIndex));
 
         }
 

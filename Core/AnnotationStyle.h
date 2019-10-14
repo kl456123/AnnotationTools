@@ -70,7 +70,6 @@
 class AnnotationStyle: public vtkInteractorStyleRubberBandPick{
     public:
         vtkTypeMacro(AnnotationStyle, vtkInteractorStyleRubberBandPick);
-        AnnotationStyle();
         static AnnotationStyle* New(){
             auto *result = new AnnotationStyle;
             result->InitializeObjectBase();
@@ -81,7 +80,7 @@ class AnnotationStyle: public vtkInteractorStyleRubberBandPick{
             this->SelectedWidget = vtkSmartPointer<AnnotationWidget>::New();
             this->SelectedWidget->Initialize(this);
         }
-        void WriteDataToDisK();
+        // void WriteDataToDisk();
 
         void SwitchFocus(std::set<vtkSmartPointer<AnnotationWidget>>::iterator iterator);
 
@@ -91,6 +90,10 @@ class AnnotationStyle: public vtkInteractorStyleRubberBandPick{
         void ClearCurrentSelection(){
             this->SelectedWidget->Clear();
         }
+
+        void ClearCurrentFrame();
+
+        void OffAllBoxes();
 
         void Save(){
             if(this->AnnotationWidgets.size()==0){
