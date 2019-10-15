@@ -1,2 +1,4 @@
 build/
 Qt/
+Protos/*.cc
+Protos/*.h

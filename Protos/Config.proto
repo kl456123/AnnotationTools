@@ -1,0 +1,46 @@
+syntax="proto3";
+
+message Config{
+    DatasetConfig dataset_config= 1;
+    DisplayConfig display_config = 2;
+    SessionConfig session_config = 3;
+}
+
+message SessionConfig{
+    int32 frame_index = 1;
+    string frame_name=2;
+    message LogConfig{
+        string log_path = 1;
+        string file_type = 2;
+    }
+}
+
+message DatasetConfig{
+    string root_path = 1;
+    string calib_path = 4;
+    string anno_path = 5;
+
+    int32 step_size = 6;
+    message ImageConfig{
+        string path = 2;
+        string file_type=1;
+    }
+    message PointCloudConfig{
+        string path = 3;
+        repeated int32 Color = 1;
+    }
+}
+
+
+message DisplayConfig{
+    message ImageConfig{
+        repeated int32 ViewPort=3;
+
+    }
+    message PointCloudConfig{
+        repeated int32 ViewPort=5;
+        repeated int32 BGColor=4;
+    }
+
+    repeated int32 WindowSize=6;
+}

@@ -22,6 +22,7 @@ void DataLoader::Save(Blob* blob){
             }
         }
     }
+    std::cout<<"Saving "<<GetCurrentFileName()<<" To Disk."<<std::endl;
 }
 
 void DataLoader::InstallPipeline(){
@@ -96,21 +97,3 @@ void DataLoader::LoadPointCloud(std::string filename){
     polyData->SetPoints(points);
     TransformFilter->SetInputData(polyData);
 }
-
-// vtkSmartPointer<vtkActor2D> ReadImageFromPNGFile(std::string& filename){
-    // auto pngReader = vtkSmartPointer<vtkPNGReader>::New();
-    // pngReader->SetFileName(filename.c_str());
-
-    // auto imageActor = vtkSmartPointer<vtkActor2D>::New();
-    // auto mapper = vtkSmartPointer<vtkImageMapper>::New();
-    // mapper->SetColorWindow(255);
-    // mapper->SetColorLevel(127.5);
-    // mapper->RenderToRectangleOn();
-    // imageActor->SetMapper(mapper);
-    // imageActor->GetMapper()->SetInputConnection(pngReader->GetOutputPort());
-    // // support to mapper
-    // imageActor->SetPosition2(1, 1);
-    // // color it first
-
-    // return imageActor;
-// }

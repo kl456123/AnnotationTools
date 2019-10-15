@@ -15,7 +15,7 @@
 
 int main(){
     auto display  = vtkSmartPointer<Display>::New();
-    std::string root_dir = "/home/breakpoint/Data/2011_09_26/2011_09_26_drive_0001_sync";
+    std::string root_dir = "/home/breakpoint/Data/KITTI/object/training";
     display->Initialize(root_dir);
     display->Start();
 

@@ -25,6 +25,11 @@ class Display : public vtkObjectBase{
         void ReadConfigFromFile(){
         }
 
+        void SetTitle(){
+            auto title = AnnotationDataloader->GetCurrentFileName();
+            this->RenderWindow->SetWindowName(title.c_str());
+        }
+
         void Initialize(std::string root_dir){
             AnnotationDataloader->Initialize(root_dir);
             InitializeRenderer();
@@ -36,7 +41,8 @@ class Display : public vtkObjectBase{
 
             // style need interactor to initialize widget
             Style->InitAnnotationWidget();
-
+            Style->SetDisplay(this);
+            SetTitle();
         }
 
         void InitializeRenderer(){

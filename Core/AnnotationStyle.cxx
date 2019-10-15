@@ -1,4 +1,5 @@
 #include "AnnotationStyle.h"
+#include "Display.h"
 
 // vtkStandardNewMacro(AnnotationStyle);
 void MatrixMultiply(double A[4][3], double B[3], double C[4]){
@@ -302,9 +303,11 @@ void AnnotationStyle::OnChar(){
     }else if(keySym=="Up"){
         this->ClearCurrentFrame();
         this->AnnotationDataloader->LoadPrev();
+        this->Displayer->SetTitle();
     }else if(keySym=="Down"){
         this->ClearCurrentFrame();
         this->AnnotationDataloader->LoadNext();
+        this->Displayer->SetTitle();
     }
     if(key=='q' or key=='Q'){
         // write data to disk

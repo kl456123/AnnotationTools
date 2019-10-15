@@ -65,6 +65,8 @@
 
 #include "DataLoader.h"
 
+class Display;
+
 
 
 class AnnotationStyle: public vtkInteractorStyleRubberBandPick{
@@ -77,8 +79,33 @@ class AnnotationStyle: public vtkInteractorStyleRubberBandPick{
         }
 
         void InitAnnotationWidget(){
+            // used for debuging
+            // this->InitAnnotationWidgetFromLabel();
+
             this->SelectedWidget = vtkSmartPointer<AnnotationWidget>::New();
             this->SelectedWidget->Initialize(this);
+
+        }
+
+        void InitAnnotationWidgetFromLabel(){
+            int numOfFeatures = this->SelectedWidget->GetNumOfFeatures();
+            Blob blob(numOfFeatures);
+            this->AnnotationDataloader->LoadLabel(&blob);
+            double info[numOfFeatures];
+            for(int i=0;i<blob.GetNumOfSamples();i++){
+                // init it
+                this->SelectedWidget = vtkSmartPointer<AnnotationWidget>::New();
+                this->SelectedWidget->Initialize(this);
+
+                // set info
+                blob.GetSample(i, info);
+                this->SelectedWidget->SetInfo(info);
+
+                // add it
+                this->AddBox();
+                // this->SelectedWidget->PlaceAnnotationBoxWidget();
+                this->SelectedWidget->PlaceArrowActor();
+            }
         }
         // void WriteDataToDisk();
 
@@ -103,11 +130,13 @@ class AnnotationStyle: public vtkInteractorStyleRubberBandPick{
             auto widget = *it;
             int numOfFeatures = widget->GetNumOfFeatures();
             Blob blob(numOfFeatures);
+            int imageShape[2];
+            AnnotationDataloader->GetImageShape(imageShape);
             for(it = this->AnnotationWidgets.begin();it!=this->AnnotationWidgets.end();it++){
                 // for each boxwidget in storage
                 widget = *it;
                 double info[numOfFeatures];
-                widget->GetInfo(info);
+                widget->GetInfo(info, imageShape);
                 blob.AddSample(info);
             }
             this->AnnotationDataloader->Save(&blob);
@@ -123,6 +152,10 @@ class AnnotationStyle: public vtkInteractorStyleRubberBandPick{
         void PlaceBorderWidget();
 
         virtual void  OnRightButtonUp() override;
+
+        void SetDisplay(vtkSmartPointer<Display> d){
+            Displayer = d;
+        }
 
         void AddBox();
 
@@ -145,6 +178,7 @@ class AnnotationStyle: public vtkInteractorStyleRubberBandPick{
             // remove all other than itself
             this->PointCloudRenderer->RemoveAllViewProps();
             this->PointCloudRenderer->AddActor(this->AnnotationDataloader->GetPointCloudActor());
+            this->PointCloudRenderer->AddActor(this->textActor);
         }
 
         void RemoveAllFromImageRenderer(){
@@ -198,6 +232,8 @@ class AnnotationStyle: public vtkInteractorStyleRubberBandPick{
         vtkSmartPointer<DataLoader> AnnotationDataloader;
 
         double AngleAdjustPrecision=5;
+
+        vtkSmartPointer<Display> Displayer;
 };
 
 

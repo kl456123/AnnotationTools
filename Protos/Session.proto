@@ -1,0 +1,6 @@
+/*Session used for preserve some information about
+  how to resume the last close occasion */
+syntax = "proto3";
+
+package session;
+

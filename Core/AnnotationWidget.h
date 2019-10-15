@@ -72,14 +72,24 @@ class AnnotationWidget: public vtkObjectBase{
         }
 
         void GetPosition(double* position){
-            double bounds[6];
-            this->PointsActor->GetBounds(bounds);
-            position[0] = (bounds[0] + bounds[1])/2;
-            position[1] = (bounds[2] + bounds[3])/2;
-            position[2] = (bounds[4] + bounds[5])/2;
+            auto polyData = vtkSmartPointer<vtkPolyData>::New();
+            this->AnnotationBoxWidget->GetPolyData(polyData);
+            int num_points = polyData->GetNumberOfPoints();
+            double coords[num_points][3];
+            for(int i=0;i<num_points;i++){
+                polyData->GetPoint(i, coords[i]);
+            }
+            // double bounds[6];
+            // this->AnnotationBoxWidget->GetBounds(bounds);
+            // position[0] = (bounds[0] + bounds[1])/2;
+            // position[1] = (bounds[2] + bounds[3])/2;
+            // position[2] = (bounds[4] + bounds[5])/2;
+            position[0] = coords[14][0];
+            position[1] = coords[14][1];
+            position[2] = coords[14][2];
         }
 
-        void GetDims(double* dims){
+        void GetDimsAndPosition(double* info){
             auto polyData = vtkSmartPointer<vtkPolyData>::New();
             this->AnnotationBoxWidget->GetPolyData(polyData);
             int num_points = polyData->GetNumberOfPoints();
@@ -90,9 +100,12 @@ class AnnotationWidget: public vtkObjectBase{
             float l = sqrt(vtkMath::Distance2BetweenPoints(coords[9], coords[8]));
             float h = sqrt(vtkMath::Distance2BetweenPoints(coords[11], coords[10]));
             float w = sqrt(vtkMath::Distance2BetweenPoints(coords[13], coords[12]));
-            dims[0] = l;
-            dims[1] = h;
-            dims[2] = w;
+            info[0] = coords[14][0];
+            info[1] = coords[14][1] + 0.5*h;// position in the ground plane
+            info[2] = coords[14][2];
+            info[3] = l;
+            info[4] = h;
+            info[5] = w;
         }
         void GetOrientation(double* ry){
             auto oldTrans = vtkSmartPointer<vtkTransform>::New();
@@ -101,21 +114,40 @@ class AnnotationWidget: public vtkObjectBase{
             double wxyz[4];
 
             oldTrans->GetOrientationWXYZ(wxyz);
-            ry[0] = wxyz[0];
+            ry[0] = wxyz[0] / 180*1.57;
+        }
+
+        void SetInfo(double* info){
+            this->Set3DInfo(info);
+        }
+
+        void Set3DInfo(double* info){
+            double bounds[6] = {-0.5, 0.5, -0.5, 0.5, -0.5, 0.5};
+            this->AnnotationBoxWidget->PlaceWidget(bounds);
+            auto trans = vtkSmartPointer<vtkTransform>::New();
+            trans->PostMultiply();
+            trans->Identity();
+            trans->Scale(info[3], info[4], info[5]);
+            trans->RotateY(info[6]);
+            trans->Translate(info[0], info[1], info[2]);
+            this->AnnotationBoxWidget->SetTransform(trans);
         }
 
         void Get3DInfo(double* info){
             // kitti format
             // 3d: xyzwhl ry
             double* infoOffset=info;
-            GetPosition(info);
-            infoOffset+=3;
-            GetDims(infoOffset);
-            infoOffset+=3;
+            // GetPosition(infoOffset);
+            // infoOffset+=3;
+            GetDimsAndPosition(infoOffset);
+            infoOffset+=6;
             GetOrientation(infoOffset);
+
+            // postprocess
+            // info[1] +=0.5*info[4];
         }
 
-        void Get2DInfo(double* info){
+        void Get2DInfo(double* info, int imageShape[2]){
             // 2d: xyxy
             // double position[2];
             // double position2[2];
@@ -123,6 +155,9 @@ class AnnotationWidget: public vtkObjectBase{
             if(rep){
                 auto position = rep->GetPosition();
                 auto position2 = rep->GetPosition2();
+
+                position2[0]+=position[0];
+                position2[1]+=position[1];
 
                 // normalized coords
                 double tmp = position[1];
@@ -132,10 +167,10 @@ class AnnotationWidget: public vtkObjectBase{
                 position2[1] = 1- position2[1];
 
                 // copy
-                info[0] = position[0];
-                info[1] = position[1];
-                info[2] = position2[0];
-                info[3] = position2[1];
+                info[0] = position[0] * imageShape[1];
+                info[1] = position[1] * imageShape[0];
+                info[2] = position2[0] * imageShape[1];
+                info[3] = position2[1] * imageShape[0];
             }else{
                 info[0] = 0 ;
                 info[1] = 0;
@@ -145,9 +180,9 @@ class AnnotationWidget: public vtkObjectBase{
 
         }
 
-        void GetInfo(double* info){
+        void GetInfo(double* info, int imageShape[2]){
             Get3DInfo(info);
-            Get2DInfo(info+7);
+            Get2DInfo(info+7, imageShape);
         }
 
         int GetNumOfFeatures(){

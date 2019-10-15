@@ -25,6 +25,10 @@ AnnotationWidget::AnnotationWidget(){
     // box_3d
     AnnotationBoxWidget = vtkSmartPointer<vtkBoxWidget>::New();
     AnnotationBoxWidget->KeyPressActivationOff();
+    // AnnotationBoxWidget->SetEnabled(false);
+    AnnotationBoxWidget->SetRotationEnabled(false);
+    // AnnotationBoxWidget->SetTranslationEnabled(false);
+    // AnnotationBoxWidget->SetScalingEnabled(false);
 
     // box_2d
     AnnotationBorderWidget = vtkSmartPointer<vtkBorderWidget>::New();
@@ -108,7 +112,7 @@ void AnnotationWidget::PlaceAnnotationBoxWidget(){
 
     BoxWidgetEnabled = true;
     this->AnnotationBoxWidget->SetProp3D(this->PointsActor);
-    this->AnnotationBoxWidget->SetPlaceFactor(1.25);
+    this->AnnotationBoxWidget->SetPlaceFactor(1);
     this->AnnotationBoxWidget->PlaceWidget();
     this->AnnotationBoxWidget->Off();
 
