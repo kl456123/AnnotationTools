@@ -73,7 +73,9 @@ class Display : public vtkObjectBase{
             RenderWindow = vtkSmartPointer<vtkRenderWindow>::New();
             RenderWindow->AddRenderer(PointCloudRenderer);
             RenderWindow->AddRenderer(ImageRenderer);
-            RenderWindow->SetSize(1600, 800);
+            // RenderWindow->FullScreenOn();
+            // RenderWindow->SetFullScreen(true);
+            RenderWindow->SetSize(1920, 1080);
         }
 
         void InitializeStyle(){

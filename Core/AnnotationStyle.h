@@ -79,8 +79,9 @@ class AnnotationStyle: public vtkInteractorStyleRubberBandPick{
         }
 
         void InitAnnotationWidget(){
+            // Test();
             // used for debuging
-            // this->InitAnnotationWidgetFromLabel();
+            this->InitAnnotationWidgetFromLabel();
 
             this->SelectedWidget = vtkSmartPointer<AnnotationWidget>::New();
             this->SelectedWidget->Initialize(this);
@@ -105,6 +106,8 @@ class AnnotationStyle: public vtkInteractorStyleRubberBandPick{
                 this->AddBox();
                 // this->SelectedWidget->PlaceAnnotationBoxWidget();
                 this->SelectedWidget->PlaceArrowActor();
+                this->SelectedWidget->SetEnabled(true);
+                this->SelectedWidget->On();
             }
         }
         // void WriteDataToDisk();

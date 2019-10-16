@@ -18,13 +18,14 @@ AnnotationWidget::AnnotationWidget(){
     ArrowMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     ArrowActor = vtkSmartPointer<vtkActor>::New();
     ArrowActor->SetScale(3);
-    ArrowActor->RotateY(90);
+    // ArrowActor->RotateY(90);
     ArrowMapper->SetInputConnection(arrowSource->GetOutputPort());
     ArrowActor->SetMapper(ArrowMapper);
 
     // box_3d
     AnnotationBoxWidget = vtkSmartPointer<vtkBoxWidget>::New();
     AnnotationBoxWidget->KeyPressActivationOff();
+    AnnotationBoxWidget->SetPlaceFactor(1);
     // AnnotationBoxWidget->SetEnabled(false);
     AnnotationBoxWidget->SetRotationEnabled(false);
     // AnnotationBoxWidget->SetTranslationEnabled(false);
@@ -70,13 +71,13 @@ void AnnotationWidget::Off(){
 void AnnotationWidget::On(){
     if(BoxWidgetEnabled){
         this->AnnotationBoxWidget->On();
+        // arrow
+        this->PointCloudRenderer->AddActor(this->ArrowActor);
     }
 
     if(BorderWidgetEnabled){
         this->AnnotationBorderWidget->On();
     }
-    // arrow
-    this->PointCloudRenderer->AddActor(this->ArrowActor);
 }
 
 void AnnotationWidget::Clear(){
@@ -112,7 +113,6 @@ void AnnotationWidget::PlaceAnnotationBoxWidget(){
 
     BoxWidgetEnabled = true;
     this->AnnotationBoxWidget->SetProp3D(this->PointsActor);
-    this->AnnotationBoxWidget->SetPlaceFactor(1);
     this->AnnotationBoxWidget->PlaceWidget();
     this->AnnotationBoxWidget->Off();
 

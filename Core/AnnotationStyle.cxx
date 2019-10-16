@@ -303,10 +303,12 @@ void AnnotationStyle::OnChar(){
     }else if(keySym=="Up"){
         this->ClearCurrentFrame();
         this->AnnotationDataloader->LoadPrev();
+        this->InitAnnotationWidgetFromLabel();
         this->Displayer->SetTitle();
     }else if(keySym=="Down"){
         this->ClearCurrentFrame();
         this->AnnotationDataloader->LoadNext();
+        this->InitAnnotationWidgetFromLabel();
         this->Displayer->SetTitle();
     }
     if(key=='q' or key=='Q'){
@@ -317,6 +319,9 @@ void AnnotationStyle::OnChar(){
     std::cout<<"key: "<<keySym<<std::endl;
     vtkInteractorStyleRubberBandPick::OnChar();
     switch(key){
+        case 'n':
+            this->SelectedWidget->HorizontalRotate90Arrow();
+            break;
         case 'h':
             this->ResetHorizontalView(camera);
             break;

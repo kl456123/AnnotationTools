@@ -58,7 +58,9 @@ class AnnotationWidget: public vtkObjectBase{
         }
 
         void AddToRenderer(){
-            this->PointCloudRenderer->AddActor(this->PointsActor);
+            if(IsValidBox()){
+                this->PointCloudRenderer->AddActor(this->PointsActor);
+            }
             this->PointCloudRenderer->AddActor(this->ArrowActor);
         }
 
@@ -79,11 +81,6 @@ class AnnotationWidget: public vtkObjectBase{
             for(int i=0;i<num_points;i++){
                 polyData->GetPoint(i, coords[i]);
             }
-            // double bounds[6];
-            // this->AnnotationBoxWidget->GetBounds(bounds);
-            // position[0] = (bounds[0] + bounds[1])/2;
-            // position[1] = (bounds[2] + bounds[3])/2;
-            // position[2] = (bounds[4] + bounds[5])/2;
             position[0] = coords[14][0];
             position[1] = coords[14][1];
             position[2] = coords[14][2];
@@ -108,13 +105,16 @@ class AnnotationWidget: public vtkObjectBase{
             info[5] = w;
         }
         void GetOrientation(double* ry){
-            auto oldTrans = vtkSmartPointer<vtkTransform>::New();
-            this->AnnotationBoxWidget->GetTransform(oldTrans);
+            double* wxyz;
 
-            double wxyz[4];
-
-            oldTrans->GetOrientationWXYZ(wxyz);
-            ry[0] = wxyz[0] / 180*1.57;
+            wxyz = this->ArrowActor->GetOrientationWXYZ();
+            if(wxyz[0]>180){
+                wxyz[0] = wxyz[0]-360;
+            }else if(wxyz[0]<-180){
+                wxyz[0] +=360;
+            }
+            // -pi, pi
+            ry[0] = wxyz[0] / 180*3.14;
         }
 
         void SetInfo(double* info){
@@ -128,9 +128,12 @@ class AnnotationWidget: public vtkObjectBase{
             trans->PostMultiply();
             trans->Identity();
             trans->Scale(info[3], info[4], info[5]);
-            trans->RotateY(info[6]);
-            trans->Translate(info[0], info[1], info[2]);
+            trans->RotateY(info[6]*180/3.14);
+            trans->Translate(info[0], info[1]-0.5*info[4], info[2]);
             this->AnnotationBoxWidget->SetTransform(trans);
+
+            // arrow actor
+            this->ArrowActor->RotateY(info[6]*180/3.14);
         }
 
         void Get3DInfo(double* info){
@@ -208,6 +211,10 @@ class AnnotationWidget: public vtkObjectBase{
             this->ArrowActor->RotateY(angle);
         }
 
+        void HorizontalRotate90Arrow(){
+            this->ArrowActor->RotateY(90);
+        }
+
         void HorizontalRotateUnClockwise(double angle){
             this->HorizontalRotateClockwise(-angle);
         }
@@ -222,6 +229,10 @@ class AnnotationWidget: public vtkObjectBase{
         void Off();
         void On();
         bool GetEnabled();
+        void SetEnabled(bool enabled){
+            this->BoxWidgetEnabled = enabled;
+            // this->BorderWidgetEnabled = enabled;
+        }
 
     private:
         // points color
