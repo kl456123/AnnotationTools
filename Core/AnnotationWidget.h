@@ -14,6 +14,7 @@
 #include <vtkPolyDataMapper.h>
 #include <vtkRenderer.h>
 #include <vtkTransform.h>
+#include <vtkPlanes.h>
 #include "vtkCustomBorderRepresentation.h"
 
 class AnnotationStyle;
@@ -97,31 +98,60 @@ class AnnotationWidget: public vtkObjectBase{
             float l = sqrt(vtkMath::Distance2BetweenPoints(coords[9], coords[8]));
             float h = sqrt(vtkMath::Distance2BetweenPoints(coords[11], coords[10]));
             float w = sqrt(vtkMath::Distance2BetweenPoints(coords[13], coords[12]));
-            info[0] = coords[14][0];
-            info[1] = coords[14][1] + 0.5*h;// position in the ground plane
-            info[2] = coords[14][2];
-            info[3] = l;
-            info[4] = h;
-            info[5] = w;
+
+            info[0] = h;
+            info[1] = w;
+            info[2] = l;
+            info[3] = coords[14][0];
+            info[4] = coords[14][1] + 0.5*h;
+            info[5] = coords[14][2];
         }
         void GetOrientation(double* ry){
-            double* wxyz;
-
-            wxyz = this->ArrowActor->GetOrientationWXYZ();
-            if(wxyz[0]>180){
-                wxyz[0] = wxyz[0]-360;
-            }else if(wxyz[0]<-180){
-                wxyz[0] +=360;
+            double ori[3];
+            this->ArrowActor->GetOrientation(ori);
+            if(ori[1]>180){
+                ori[1] = ori[1]-360;
+            }else if(ori[1]<-180){
+                ori[1] +=360;
             }
             // -pi, pi
-            ry[0] = wxyz[0] / 180*3.14;
+            ry[0] = ori[1] / 180*3.14;
         }
 
-        void SetInfo(double* info){
+        void SetInfo(double* info, int imageShape[2]){
             this->Set3DInfo(info);
+            this->Set2DInfo(info+7, imageShape);
+        }
+
+        void Set2DInfo(double* info, int imageShape[2]){
+            auto rep = vtkSmartPointer<vtkCustomBorderRepresentation>::New();
+            this->AnnotationBorderWidget->SetRepresentation(rep);
+            double position[2];
+            double position2[2];
+
+
+            position2[0]+=position[0];
+            position2[1]+=position[1];
+
+            // copy
+            position[0] = info[0]/imageShape[1];
+            position[1]= 1-info[1]/imageShape[0];
+            position2[0] = info[2]/imageShape[1];
+            position2[1] = 1-info[3]/imageShape[0];
+
+            double tmp = position[1];
+            position[1] = position2[1];
+            position2[1] = tmp;
+            position2[0] = position2[0] - position[0];
+            position2[1] = position2[1] - position[1];
+            rep->SetPosition(position);
+            rep->SetPosition2(position2);
         }
 
         void Set3DInfo(double* info){
+            // if(info[6]<0){
+                // info[6]+=2*3.14;
+            // }
             double bounds[6] = {-0.5, 0.5, -0.5, 0.5, -0.5, 0.5};
             this->AnnotationBoxWidget->PlaceWidget(bounds);
             auto trans = vtkSmartPointer<vtkTransform>::New();
@@ -136,12 +166,19 @@ class AnnotationWidget: public vtkObjectBase{
             this->ArrowActor->RotateY(info[6]*180/3.14);
         }
 
+        void SetVisible(double* info){
+            info[0] = 0;
+            info[1] = -1;
+            info[2] = -1;
+            info[3] = -10;
+        }
+
         void Get3DInfo(double* info){
             // kitti format
             // 3d: xyzwhl ry
             double* infoOffset=info;
             // GetPosition(infoOffset);
-            // infoOffset+=3;
+
             GetDimsAndPosition(infoOffset);
             infoOffset+=6;
             GetOrientation(infoOffset);
@@ -184,12 +221,13 @@ class AnnotationWidget: public vtkObjectBase{
         }
 
         void GetInfo(double* info, int imageShape[2]){
-            Get3DInfo(info);
-            Get2DInfo(info+7, imageShape);
+            SetVisible(info);
+            Get2DInfo(info+4, imageShape);
+            Get3DInfo(info+8);
         }
 
         int GetNumOfFeatures(){
-            return 4+7;
+            return 4+7 + 4;
         }
 
         void HorizontalRotateClockwise(double angle){
@@ -222,6 +260,10 @@ class AnnotationWidget: public vtkObjectBase{
 
         void Clear();
 
+        void GetPlanes(vtkPlanes* planes){
+            return this->AnnotationBoxWidget->GetPlanes(planes);
+        }
+
         void PlaceAnnotationBorderWidget(double* position, double* position2);
         void PlaceArrowActor();
         void PlaceAnnotationBoxWidget();
@@ -231,7 +273,7 @@ class AnnotationWidget: public vtkObjectBase{
         bool GetEnabled();
         void SetEnabled(bool enabled){
             this->BoxWidgetEnabled = enabled;
-            // this->BorderWidgetEnabled = enabled;
+            this->BorderWidgetEnabled = enabled;
         }
 
     private:

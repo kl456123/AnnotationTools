@@ -85,7 +85,6 @@ class AnnotationStyle: public vtkInteractorStyleRubberBandPick{
 
             this->SelectedWidget = vtkSmartPointer<AnnotationWidget>::New();
             this->SelectedWidget->Initialize(this);
-
         }
 
         void InitAnnotationWidgetFromLabel(){
@@ -93,6 +92,10 @@ class AnnotationStyle: public vtkInteractorStyleRubberBandPick{
             Blob blob(numOfFeatures);
             this->AnnotationDataloader->LoadLabel(&blob);
             double info[numOfFeatures];
+            int imageShape[2];
+            AnnotationDataloader->GetImageShape(imageShape);
+            // get points
+            AnnotationDataloader->Update();
             for(int i=0;i<blob.GetNumOfSamples();i++){
                 // init it
                 this->SelectedWidget = vtkSmartPointer<AnnotationWidget>::New();
@@ -100,13 +103,19 @@ class AnnotationStyle: public vtkInteractorStyleRubberBandPick{
 
                 // set info
                 blob.GetSample(i, info);
-                this->SelectedWidget->SetInfo(info);
+
+                this->SelectedWidget->SetInfo(info, imageShape);
+                auto planes = vtkSmartPointer<vtkPlanes>::New();
+                this->SelectedWidget->GetPlanes(planes);
+                this->ExtractPoints(this->Points, planes);
 
                 // add it
                 this->AddBox();
+                // disable this line, otherwise box will disappear when no points selected
                 // this->SelectedWidget->PlaceAnnotationBoxWidget();
                 this->SelectedWidget->PlaceArrowActor();
                 this->SelectedWidget->SetEnabled(true);
+                this->SelectedWidget->SetDeactiveColor();
                 this->SelectedWidget->On();
             }
         }

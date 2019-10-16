@@ -279,7 +279,7 @@ void AnnotationStyle::ClearCurrentFrame(){
     this->AnnotationWidgets.clear();
     this->RemoveAllFromPointCloudRenderer();
     this->RemoveAllFromImageRenderer();
-    this->ResetCurrentSelection();
+    // this->ResetCurrentSelection();
 }
 
 
@@ -301,14 +301,19 @@ void AnnotationStyle::OnChar(){
     }else if(keySym=="Left"){
         this->SelectedWidget->HorizontalRotateUnClockwise(AngleAdjustPrecision);
     }else if(keySym=="Up"){
+        this->Save();
         this->ClearCurrentFrame();
+        PrintCurrentVisibleBox("Up");
         this->AnnotationDataloader->LoadPrev();
-        this->InitAnnotationWidgetFromLabel();
+        // this->InitAnnotationWidgetFromLabel();
+        this->InitAnnotationWidget();
         this->Displayer->SetTitle();
     }else if(keySym=="Down"){
+        this->Save();
         this->ClearCurrentFrame();
+        PrintCurrentVisibleBox("Down");
         this->AnnotationDataloader->LoadNext();
-        this->InitAnnotationWidgetFromLabel();
+        this->InitAnnotationWidget();
         this->Displayer->SetTitle();
     }
     if(key=='q' or key=='Q'){
@@ -442,7 +447,6 @@ void AnnotationStyle::OnLeftButtonUp(){
         // pick actor as selectedActor, used for modify precisely
         this->PickActor();
     }else{
-
         vtkSmartPointer<vtkImplicitFunction> frustum_deepcopy;
         bool IsImageEvent = this->GetCurrentRenderer()==this->ImageRenderer;
         if(IsImageEvent){
@@ -463,7 +467,6 @@ void AnnotationStyle::OnLeftButtonUp(){
                 {4.575831000000e+01,-3.454157000000e-01,4.981016000000e-03}};
             frustum_deepcopy = GenerateFrustum(PT, box);
         }else{
-
             auto frustum  = static_cast<vtkAreaPicker*>(this->GetInteractor()->GetPicker())->GetFrustum();
             // deepcopy planes
             vtkSmartPointer<vtkPlanes> frustum_deepcopy1 = vtkSmartPointer<vtkPlanes>::New();

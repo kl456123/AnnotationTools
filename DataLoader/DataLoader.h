@@ -97,11 +97,11 @@ class DataLoader: public vtkObjectBase{
             double used_info[numOfFeatures];
             char s[100];
             while(fscanf(f, "%s", s)!=EOF){
-                if(s[0]=='D' and s[1]=='o' and s[2]=='n'){
-                    continue;
-                }
                 for(int i=0;i<14;i++){
                     fscanf(f, "%lf", info+i);
+                }
+                if(s[0]=='D' and s[1]=='o' and s[2]=='n'){
+                    continue;
                 }
                 // location
                 used_info[0] = info[10];
@@ -114,7 +114,18 @@ class DataLoader: public vtkObjectBase{
 
                 // ry
                 used_info[6] = info[13];
+
+                // 2d
+                used_info[7] =  info[3];
+                used_info[8] = info[4];
+                used_info[9] = info[5];
+                used_info[10] = info[6];
                 blob->AddSample(used_info);
+                for(int i=0;i<11;i++){
+                    std::cout<<used_info[i];
+                    std::cout<<" ";
+                }
+                std::cout<<std::endl;
             }
             fclose(f);
         }
@@ -139,9 +150,6 @@ class DataLoader: public vtkObjectBase{
             Load(FileIndex);
         }
 
-        void Update(){
-        }
-
         void LoadImage(string fn){
             ImageReader->SetFileName(fn.c_str());
             // get image shape
@@ -160,6 +168,9 @@ class DataLoader: public vtkObjectBase{
         void LoadPointCloud(string fn);
 
         void LoadAnnotation(string fn){
+            if(fd){
+                fclose(fd);
+            }
             fd = fopen(fn.c_str(), "w");
             if(!fd){
                 std::cout<<"Error when opening annotation file."<<fn<<std::endl;
@@ -221,26 +232,6 @@ class DataLoader: public vtkObjectBase{
         void InstallPipeline();
 
         void LoadCalibration(string calib_fn){
-            // ifstream file;
-            // file.open(calib_fn, std::ios::in);
-            // double VeloToCam[16]={0};
-            // VeloToCam[15] = 1;
-            // double R0_rect[16] = {0};
-            // R0_rect[15] = 1;
-            // if(!file.is_open()){
-                // return ;
-            // }
-            // std::string line;
-            // while(getline(file, line)){
-                // if(line.empty()){
-                    // continue;
-                // }
-                // if(line.substr(0, 7)=="R0_rect"){
-                    // istreamstring s(line);
-                    // for(int i=0;i<)
-                // }
-            // }
-
             FILE* f = fopen(calib_fn.c_str(), "r");
             char s[100];
             double VeloToCam[16]={0};
@@ -262,27 +253,11 @@ class DataLoader: public vtkObjectBase{
             }
             fclose(f);
 
-
-
-            // 9.999239000000e-01 9.837760000000e-03 -7.445048000000e-03 -9.869795000000e-03 9.999421000000e-01 -4.278459000000e-03 7.402527000000e-03 4.351614000000e-03 9.999631000000e-01
-            // double VeloToCam[16] = {7.533745000000e-03, -9.999714000000e-01, -6.166020000000e-04, -4.069766000000e-03,
-                // 1.480249000000e-02, 7.280733000000e-04, -9.998902000000e-01, -7.631618000000e-02,
-                // 9.998621000000e-01, 7.523790000000e-03, 1.480755000000e-02, -2.717806000000e-01,
-                // 0,0,0,1};
-            // double R0_rect[16] = {9.999128000000e-01, 1.009263000000e-02, -8.511932000000e-03,0,
-                // -1.012729000000e-02, 9.999406000000e-01, -4.037671000000e-03,0,
-                // 8.470675000000e-03, 4.123522000000e-03, 9.999556000000e-01, 0,
-                // 0,0,0,1};
-            // double VeloToCam[16] = {6.927964000000e-03, -9.999722000000e-01, -2.757829000000e-03, -2.457729000000e-02,
-            // -1.162982000000e-03, 2.749836000000e-03, -9.999955000000e-01, -6.127237000000e-02,
-            // 9.999753000000e-01, 6.931141000000e-03, -1.143899000000e-03, -3.321029000000e-01,
-            // 0.0,0.0,0.0,1.0};
             auto transform = vtkSmartPointer<vtkTransform>::New();
             transform->Identity();
             transform->PostMultiply();
             transform->Concatenate(R0_rect);
             transform->Concatenate(VeloToCam);
-            // TransformFilter->Print(std::cout);
             TransformFilter->SetTransform(transform);
         }
 
@@ -301,6 +276,11 @@ class DataLoader: public vtkObjectBase{
 
         vtkPolyData* GetPoints(){
             return TransformFilter->GetOutput();
+        }
+
+        void Update(){
+            this->ImageActor->GetMapper()->Update();
+            this->PointCloudActor->GetMapper()->Update();
         }
 
     private:

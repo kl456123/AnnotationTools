@@ -125,7 +125,6 @@ void AnnotationWidget::PlaceArrowActor(){
     auto polyData = vtkSmartPointer<vtkPolyData>::New();
     this->AnnotationBoxWidget->GetPolyData(polyData);
     polyData->GetPoint(polyData->GetNumberOfPoints()-1, position);
-    std::cout<<position[0]<<" "<<position[1]<<" "<<position[2]<<std::endl;
     ArrowActor->SetPosition(position);
 }
 

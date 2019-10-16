@@ -12,7 +12,7 @@ void DataLoader::Save(Blob* blob){
         for(int i=0;i<num_samples;i++){
             blob->GetSample(i, sample_data);
             for(int j=0;j<num_features;j++){
-                fprintf(fd, "%.4f", sample_data[j]);
+                fprintf(fd, "%.2f", sample_data[j]);
                 if(j<num_features-1){
                     fprintf(fd," ");
                 }
