@@ -7,6 +7,14 @@ void MatrixMultiply(double A[4][3], double B[3], double C[4]){
         C[i] = A[i][0]*B[0] + A[i][1]*B[1] + A[i][2]*B[2];
     }
 }
+
+void Transpose(double PT[3][4], double PT_trans[4][3]){
+    for(int i=0;i<4;i++){
+        for(int j=0;j<3;j++){
+            PT_trans[i][j] = PT[j][i];
+        }
+    }
+}
 vtkSmartPointer <vtkImplicitBoolean> GenerateFrustum(double PT[4][3], double box[]){
     double l_left[] = {box[0], box[1], box[0], box[3]};
     double l_right[] = {box[0], box[1], box[2], box[1]};
@@ -248,13 +256,13 @@ void AnnotationStyle::RemoveBox(){
 
 void AnnotationStyle::HandleCurrentSelection(){
     // if null
-    if(this->SelectedWidget->IsValidBox()){
-        // can add to cache
-        this->AddBox();
-    }else{
-        // remove from cache automaticly
-        this->RemoveBox();
-    }
+    // if(this->SelectedWidget->IsValidBox()){
+        // // can add to cache
+        // this->AddBox();
+    // }else{
+        // // remove from cache automaticly
+        // this->RemoveBox();
+    // }
 }
 
 void AnnotationStyle::PrintCurrentVisibleBox(std::string callerStack){
@@ -463,11 +471,14 @@ void AnnotationStyle::OnLeftButtonUp(){
                 double(windowSize[1]-this->EndPosition[1])/scales[1]};
             std::cout<<"Selected Region "<<box[0]<<" "<<box[1]<<" "<<box[2]<<" "<<box[3]<<std::endl;
             std::cout<<"Window Size: "<<windowSize[0]<<" "<<windowSize[1]<<std::endl;
-            double PT[4][3] = {{7.070493000000e+02,0,0},
-                {0,7.070493000000e+02, 0},
-                {6.040814000000e+02,1.805066000000e+02,1},
-                {4.575831000000e+01,-3.454157000000e-01,4.981016000000e-03}};
-            frustum_deepcopy = GenerateFrustum(PT, box);
+            // double PT[4][3] = {{7.070493000000e+02,0,0},
+                // {0,7.070493000000e+02, 0},
+                // {6.040814000000e+02,1.805066000000e+02,1},
+                // {4.575831000000e+01,-3.454157000000e-01,4.981016000000e-03}};
+            double PT[3][4], PT_trans[4][3];
+            this->AnnotationDataloader->GetProjectMatrix(PT);
+            Transpose(PT, PT_trans);
+            frustum_deepcopy = GenerateFrustum(PT_trans, box);
         }else{
             auto frustum  = static_cast<vtkAreaPicker*>(this->GetInteractor()->GetPicker())->GetFrustum();
             // deepcopy planes

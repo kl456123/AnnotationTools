@@ -130,6 +130,7 @@ class AnnotationStyle: public vtkInteractorStyleRubberBandPick{
         void ResetCurrentSelection();
 
         void ClearCurrentSelection(){
+            this->RemoveBox();
             this->SelectedWidget->Clear();
         }
 
@@ -138,9 +139,9 @@ class AnnotationStyle: public vtkInteractorStyleRubberBandPick{
         void OffAllBoxes();
 
         void Save(){
-            if(this->AnnotationWidgets.size()==0){
-                return ;
-            }
+            // if(this->AnnotationWidgets.size()==0){
+                // return ;
+            // }
             auto it = this->AnnotationWidgets.begin();
             auto widget = *it;
             int numOfFeatures = widget->GetNumOfFeatures();

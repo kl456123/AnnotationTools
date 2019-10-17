@@ -4,6 +4,7 @@ message Config{
     DatasetConfig dataset_config= 1;
     DisplayConfig display_config = 2;
     SessionConfig session_config = 3;
+    AnnotationConfig annotation_config = 4;
 }
 
 message SessionConfig{
@@ -29,6 +30,11 @@ message DatasetConfig{
         string path = 3;
         repeated int32 Color = 1;
     }
+}
+
+message AnnotationConfig{
+    bool save_empty_file = 1;// when nothing annotated in a frame
+    bool save_empty_box = 2;// when no points in a box
 }
 
 

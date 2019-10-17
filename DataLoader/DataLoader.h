@@ -283,6 +283,11 @@ class DataLoader: public vtkObjectBase{
                         fscanf(f, "%lf", VeloToCam+i);
                     }
                 }
+                if(s[0]=='P' and s[1]=='2'){
+                    for(int i=0;i<12;i++){
+                        fscanf(f, "%lf", ProjectMatrix+i);
+                    }
+                }
             }
             fclose(f);
 
@@ -316,12 +321,19 @@ class DataLoader: public vtkObjectBase{
             this->PointCloudActor->GetMapper()->Update();
         }
 
+        void GetProjectMatrix(double PT[3][4]){
+            for(int i=0;i<12;i++){
+                PT[i/4][i%4] = ProjectMatrix[i];
+            }
+        }
+
     private:
         string root_dir;
         vector<string> filenames;
         vtkSmartPointer<vtkTransformPolyDataFilter> TransformFilter;
         FILE* fd;
         int FileIndex;
+        double ProjectMatrix[12];
         vtkSmartPointer<vtkPNGReader> ImageReader;
         // vtkSmartPointer<vtkPolyData> PolyData;
         vtkSmartPointer<vtkActor2D> ImageActor;
