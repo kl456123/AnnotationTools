@@ -124,7 +124,9 @@ void AnnotationStyle::SwitchFocus(){
 
 void AnnotationStyle::ResetCurrentSelection(){
     if(!this->SelectedWidget or this->SelectedWidget->IsValidBox()){
-        InitAnnotationWidget();
+        this->SelectedWidget = vtkSmartPointer<AnnotationWidget>::New();
+        this->SelectedWidget->Initialize(this);
+        // InitAnnotationWidget();
     }
     // otherwise dont need to allocate new memory
 }

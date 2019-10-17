@@ -98,6 +98,12 @@ class AnnotationWidget: public vtkObjectBase{
             float l = sqrt(vtkMath::Distance2BetweenPoints(coords[9], coords[8]));
             float h = sqrt(vtkMath::Distance2BetweenPoints(coords[11], coords[10]));
             float w = sqrt(vtkMath::Distance2BetweenPoints(coords[13], coords[12]));
+            if(this->FaceIndex==1 or this->FaceIndex==3){
+                // swap l and w
+                float tmp = l;
+                l = w;
+                w = tmp;
+            }
 
             info[0] = h;
             info[1] = w;
@@ -234,6 +240,7 @@ class AnnotationWidget: public vtkObjectBase{
             // rotate box widget
             auto oldTrans = vtkSmartPointer<vtkTransform>::New();
             this->AnnotationBoxWidget->GetTransform(oldTrans);
+            oldTrans->PostMultiply();
             auto newTrans = vtkSmartPointer<vtkTransform>::New();
             double position[3];
             GetPosition(position);
@@ -251,6 +258,7 @@ class AnnotationWidget: public vtkObjectBase{
 
         void HorizontalRotate90Arrow(){
             this->ArrowActor->RotateY(90);
+            this->FaceIndex = (this->FaceIndex+1)%4;
         }
 
         void HorizontalRotateUnClockwise(double angle){
@@ -302,6 +310,7 @@ class AnnotationWidget: public vtkObjectBase{
         // border widget state
         bool BorderWidgetEnabled;
         bool BoxWidgetEnabled;
+        int FaceIndex;
 
         enum {GREEN=0, RED};
 };

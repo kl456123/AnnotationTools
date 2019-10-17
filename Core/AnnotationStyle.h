@@ -90,7 +90,10 @@ class AnnotationStyle: public vtkInteractorStyleRubberBandPick{
         void InitAnnotationWidgetFromLabel(){
             int numOfFeatures = this->SelectedWidget->GetNumOfFeatures();
             Blob blob(numOfFeatures);
-            this->AnnotationDataloader->LoadLabel(&blob);
+            if(!this->AnnotationDataloader->LoadAnnotation(&blob)){
+                // no annotation file
+                return;
+            }
             double info[numOfFeatures];
             int imageShape[2];
             AnnotationDataloader->GetImageShape(imageShape);

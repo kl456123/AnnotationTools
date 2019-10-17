@@ -37,6 +37,9 @@ AnnotationWidget::AnnotationWidget(){
 
     // set color
     Colors =  vtkSmartPointer<vtkNamedColors>::New();
+
+    // some internal state
+    FaceIndex = 0;
 }
 
 void AnnotationWidget::Initialize(AnnotationStyle* style){

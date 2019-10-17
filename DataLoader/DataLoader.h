@@ -89,46 +89,46 @@ class DataLoader: public vtkObjectBase{
             return GetAnnotationDir()+"/"+filenames[fileIndex]+".txt";
         }
 
-        void LoadLabel(Blob* blob){
-            // used for debuging in kitti dataset
-            FILE* f = fopen(GetLabelPath(FileIndex).c_str(), "r");
-            double info[14];
-            auto numOfFeatures = blob->GetNumOfFeatures();
-            double used_info[numOfFeatures];
-            char s[100];
-            while(fscanf(f, "%s", s)!=EOF){
-                for(int i=0;i<14;i++){
-                    fscanf(f, "%lf", info+i);
-                }
-                if(s[0]=='D' and s[1]=='o' and s[2]=='n'){
-                    continue;
-                }
-                // location
-                used_info[0] = info[10];
-                used_info[1] = info[11];
-                used_info[2] = info[12];
-                // dims
-                used_info[3] = info[9];
-                used_info[4] = info[7];
-                used_info[5] = info[8];
+        // void LoadLabel(Blob* blob){
+            // // used for debuging in kitti dataset
+            // FILE* f = fopen(GetLabelPath(FileIndex).c_str(), "r");
+            // double info[14];
+            // auto numOfFeatures = blob->GetNumOfFeatures();
+            // double used_info[numOfFeatures];
+            // char s[100];
+            // while(fscanf(f, "%s", s)!=EOF){
+                // for(int i=0;i<14;i++){
+                    // fscanf(f, "%lf", info+i);
+                // }
+                // if(s[0]=='D' and s[1]=='o' and s[2]=='n'){
+                    // continue;
+                // }
+                // // location
+                // used_info[0] = info[10];
+                // used_info[1] = info[11];
+                // used_info[2] = info[12];
+                // // dims
+                // used_info[3] = info[9];
+                // used_info[4] = info[7];
+                // used_info[5] = info[8];
 
-                // ry
-                used_info[6] = info[13];
+                // // ry
+                // used_info[6] = info[13];
 
-                // 2d
-                used_info[7] =  info[3];
-                used_info[8] = info[4];
-                used_info[9] = info[5];
-                used_info[10] = info[6];
-                blob->AddSample(used_info);
-                for(int i=0;i<11;i++){
-                    std::cout<<used_info[i];
-                    std::cout<<" ";
-                }
-                std::cout<<std::endl;
-            }
-            fclose(f);
-        }
+                // // 2d
+                // used_info[7] =  info[3];
+                // used_info[8] = info[4];
+                // used_info[9] = info[5];
+                // used_info[10] = info[6];
+                // blob->AddSample(used_info);
+                // for(int i=0;i<11;i++){
+                    // std::cout<<used_info[i];
+                    // std::cout<<" ";
+                // }
+                // std::cout<<std::endl;
+            // }
+            // fclose(f);
+        // }
 
 
 
@@ -167,16 +167,48 @@ class DataLoader: public vtkObjectBase{
 
         void LoadPointCloud(string fn);
 
-        void LoadAnnotation(string fn){
-            if(fd){
-                fclose(fd);
-            }
-            fd = fopen(fn.c_str(), "w");
-            if(!fd){
-                std::cout<<"Error when opening annotation file."<<fn<<std::endl;
+        bool LoadAnnotation(Blob* blob){
+            auto fn = GetAnnotationPath(FileIndex);
+            FILE* f = fopen(fn.c_str(), "r");
+            if(!f){
+                std::cout<<"No annotation file to load. "<<fn<<std::endl;
+                return false;
             }else{
-                // create directory
-                // system;
+                // used for debuging in kitti dataset
+                double info[14];
+                auto numOfFeatures = blob->GetNumOfFeatures();
+                double used_info[numOfFeatures];
+                char s[100];
+                while(fscanf(f, "%s", s)!=EOF){
+                    for(int i=0;i<14;i++){
+                        fscanf(f, "%lf", info+i);
+                    }
+                    // location
+                    used_info[0] = info[10];
+                    used_info[1] = info[11];
+                    used_info[2] = info[12];
+                    // dims
+                    used_info[3] = info[9];
+                    used_info[4] = info[7];
+                    used_info[5] = info[8];
+
+                    // ry
+                    used_info[6] = info[13];
+
+                    // 2d
+                    used_info[7] =  info[3];
+                    used_info[8] = info[4];
+                    used_info[9] = info[5];
+                    used_info[10] = info[6];
+                    blob->AddSample(used_info);
+                    for(int i=0;i<11;i++){
+                        std::cout<<used_info[i];
+                        std::cout<<" ";
+                    }
+                    std::cout<<std::endl;
+                }
+                fclose(f);
+                return true;
             }
         }
         void Load(int fileIndex){
@@ -190,7 +222,8 @@ class DataLoader: public vtkObjectBase{
             LoadPointCloud(GetPointCloudPath(fileIndex));
 
             // load annotation if any
-            LoadAnnotation(GetAnnotationPath(fileIndex));
+            // called by style class
+            // LoadAnnotation(GetAnnotationPath(fileIndex));
 
         }
 

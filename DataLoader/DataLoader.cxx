@@ -8,6 +8,8 @@ void DataLoader::Save(Blob* blob){
     auto num_samples = blob->GetNumOfSamples();
     auto num_features = blob->GetNumOfFeatures();
     double sample_data[num_features];
+    auto fn = GetAnnotationPath(FileIndex);
+    fd = fopen(fn.c_str(), "w");
     if(this->fd){
         for(int i=0;i<num_samples;i++){
             blob->GetSample(i, sample_data);
@@ -21,6 +23,9 @@ void DataLoader::Save(Blob* blob){
                 fprintf(fd, "\n");
             }
         }
+        fclose(fd);
+    }else{
+        std::cout<<"Error When opening file: "<<fn<<std::endl;
     }
     std::cout<<"Saving "<<GetCurrentFileName()<<" To Disk."<<std::endl;
 }
