@@ -17,7 +17,7 @@ AnnotationWidget::AnnotationWidget(){
     auto arrowSource = vtkSmartPointer<vtkArrowSource>::New();
     ArrowMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     ArrowActor = vtkSmartPointer<vtkActor>::New();
-    ArrowActor->SetScale(3);
+    ArrowActor->SetScale(2);
     // ArrowActor->RotateY(90);
     ArrowMapper->SetInputConnection(arrowSource->GetOutputPort());
     ArrowActor->SetMapper(ArrowMapper);
@@ -92,6 +92,10 @@ void AnnotationWidget::Clear(){
         // no used for arrow actor
         polyData->Initialize();
         this->PointCloudRenderer->RemoveActor(this->ArrowActor);
+        // reset arrowactor, if can reset rotation
+        ArrowActor = vtkSmartPointer<vtkActor>::New();
+        ArrowActor->SetScale(2);
+        ArrowActor->SetMapper(ArrowMapper);
     }
     //set off to widgets
     BoxWidgetEnabled = false;
