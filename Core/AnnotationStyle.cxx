@@ -38,7 +38,7 @@ vtkSmartPointer <vtkImplicitBoolean> GenerateFrustum(double PT[4][3], double box
         MatrixMultiply(PT, B, C);
         auto plane = vtkSmartPointer<vtkPlane>::New();
         if(i==0 or i==3){
-            plane->SetNormal(-C[0],-C[0],-C[2]);
+            plane->SetNormal(-C[0],-C[1],-C[2]);
         }else{
             plane->SetNormal(C[0],C[1],C[2]);
         }
@@ -51,10 +51,11 @@ vtkSmartPointer <vtkImplicitBoolean> GenerateFrustum(double PT[4][3], double box
         }else{
             origin[0] = C[3]/C[0];
         }
-        std::cout<<"Origin: "<<origin[0]<<" "<<origin[1]<<" "<<origin[2]<<std::endl;
-        std::cout<<"Normal: "<<C[0]<<" "<< C[1]<<" "<<C[2]<<std::endl;
+        // std::cout<<"Origin: "<<origin[0]<<" "<<origin[1]<<" "<<origin[2]<<std::endl;
+        // std::cout<<"Normal: "<<C[0]<<" "<< C[1]<<" "<<C[2]<<std::endl;
         plane->SetOrigin(origin);
         planes->AddFunction(plane);
+        // plane->Print(std::cout);
     }
     return planes;
 
@@ -464,20 +465,24 @@ void AnnotationStyle::OnLeftButtonUp(){
             // this->SetCurrentRenderer(this->PointCloudRenderer);
             int windowSize[2];
             this->GetInteractor()->GetSize(windowSize);
-            double scales[2] = {windowSize[0]/1242.0,windowSize[1]/2.0/375.0};
-            double box[4] = {double(this->StartPosition[0])/scales[0],
-                double(windowSize[1]-this->StartPosition[1])/scales[1],
-                double(this->EndPosition[0])/scales[0],
-                double(windowSize[1]-this->EndPosition[1])/scales[1]};
+            int imageShape[2];
+            this->AnnotationDataloader->GetImageShape(imageShape);
+            // scale for y,x
+            double scales[2] = {windowSize[1]/2.0/imageShape[0],windowSize[0]/1.0/imageShape[1]};
+            double box[4] = {double(this->StartPosition[0])/scales[1],
+                double(windowSize[1]-this->StartPosition[1])/scales[0],
+                double(this->EndPosition[0])/scales[1],
+                double(windowSize[1]-this->EndPosition[1])/scales[0]};
             std::cout<<"Selected Region "<<box[0]<<" "<<box[1]<<" "<<box[2]<<" "<<box[3]<<std::endl;
             std::cout<<"Window Size: "<<windowSize[0]<<" "<<windowSize[1]<<std::endl;
-            // double PT[4][3] = {{7.070493000000e+02,0,0},
-                // {0,7.070493000000e+02, 0},
-                // {6.040814000000e+02,1.805066000000e+02,1},
-                // {4.575831000000e+01,-3.454157000000e-01,4.981016000000e-03}};
             double PT[3][4], PT_trans[4][3];
             this->AnnotationDataloader->GetProjectMatrix(PT);
             Transpose(PT, PT_trans);
+            std::cout<<"ProjectMatrix: ";
+            for(int i=0;i<12;i++){
+                std::cout<<PT[i/4][i%4]<<" ";
+            }
+            std::cout<<std::endl;
             frustum_deepcopy = GenerateFrustum(PT_trans, box);
         }else{
             auto frustum  = static_cast<vtkAreaPicker*>(this->GetInteractor()->GetPicker())->GetFrustum();

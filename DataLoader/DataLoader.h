@@ -294,8 +294,8 @@ class DataLoader: public vtkObjectBase{
             auto transform = vtkSmartPointer<vtkTransform>::New();
             transform->Identity();
             transform->PostMultiply();
-            transform->Concatenate(R0_rect);
             transform->Concatenate(VeloToCam);
+            transform->Concatenate(R0_rect);
             TransformFilter->SetTransform(transform);
         }
 
