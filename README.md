@@ -41,16 +41,20 @@ make -j8
 * "i", display all annotation(2d box and 3d box)
 * "r", switch between view mode and edit mode
 * "Control", intersection select pointcloud, multiple view select and then intersection them
+* "No Control", select from total points and add it
+* "Left" and "Right", rotate highlight box(selected box) clockwise or unclockwise
+* "Up" and "Down", go to the next frame
+* "n", rotate arrow 90 degree, to determine which face is the front face
 
 ### Configuration
 * rawdata path
 * storage path
 - root_dir
-    - image_02
-    - velodyne_points
+    - image_2
+    - velodyne
     - calib
-    - label_2
-* all annotation data will saved into label_2 using txt format,
+    - anno_2
+* all annotation data will saved into anno_2 using txt format,
 all filenames of annotation is according to the filenames of data.(the prefix name is the same)
 
 ### Demo Image
