@@ -121,6 +121,9 @@ vtkSmartPointer <vtkImplicitBoolean> GenerateFrustum(double PT[4][3], double box
 void AnnotationStyle::SwitchFocus(std::set<vtkSmartPointer<AnnotationWidget>>::iterator iterator){
     if(iterator==AnnotationWidgets.end())return;
     this->SelectedWidget = *iterator;
+    auto renderer = this->PointCloudRenderer;
+    auto camera = renderer->GetActiveCamera();
+    this->SwitchFocalPoints(iterator, camera);
 }
 
 void AnnotationStyle::SwitchFocus(){
@@ -143,24 +146,25 @@ void AnnotationStyle::ResetCurrentSelection(){
 
 
 void AnnotationStyle::ResetHorizontalView(vtkCamera* camera){
-    camera->SetPosition(0.06046166, -0.00176016,  0.00498102);
-    camera->SetFocalPoint(0.07551017, 0.02256332, 1.);
-    camera->SetViewUp(0.        , -0.96892317, -0.24736186);
-    // camera->ComputeViewPlaneNormal();
-    double image_size = 375;
-    double focal = 707;
-    double view_angle = std::atan(image_size/2/focal)*180/3.1415*2;
-    camera->SetViewAngle(view_angle);
+    double *focalPoint = camera->GetFocalPoint();
+    camera->SetPosition(focalPoint[0], focalPoint[1],-100);
+    camera->SetViewUp(0, -1, 0);
+    camera->ComputeViewPlaneNormal();
+    // double image_size = 375;
+    // double focal = 707;
+    // double view_angle = std::atan(image_size/2/focal)*180/3.1415*2;
+    // camera->SetViewAngle(view_angle);
     camera->SetClippingRange(0.1, 3000);
-    double imageShape[2] = {375, 1242};
-    double windowCenter[2] = {2*604/imageShape[1]-1, 2*(1-180/imageShape[0])-1};
-    std::cout<<"Window Center: "<<windowCenter<<std::endl;
-    camera->SetWindowCenter(windowCenter[0], windowCenter[1]);
+    // double imageShape[2] = {375, 1242};
+    // double windowCenter[2] = {2*604/imageShape[1]-1, 2*(1-180/imageShape[0])-1};
+    // std::cout<<"Window Center: "<<windowCenter<<std::endl;
+    // camera->SetWindowCenter(windowCenter[0], windowCenter[1]);
 }
 
 void AnnotationStyle::ResetVerticalView(vtkCamera* camera){
-    camera->SetPosition(0.0, -100, 0.0);
-    camera->SetFocalPoint(0.0, 0.0, 0.0);
+    double *focalPoint = camera->GetFocalPoint();
+    camera->SetPosition(focalPoint[0], -100, focalPoint[2]);
+    // camera->SetFocalPoint(0.0, 0.0, 0.0);
     camera->SetViewUp(-1.0,0.0,  0.0);
     camera->ComputeViewPlaneNormal();
     camera->SetClippingRange(0.1, 3000);
@@ -241,7 +245,12 @@ void AnnotationStyle::RemoveBox(){
             this->it = this->AnnotationWidgets.end();
         }else{
             // reset to the first one
-            this->it = this->AnnotationWidgets.begin();
+            // this->it = this->AnnotationWidgets.begin();
+            if(this->it==this->AnnotationWidgets.begin()){
+                this->it++;
+            }else{
+                this->it--;
+            }
         }
         // this->PointCloudRenderer->RemoveActor(it->PointsActor);
         auto widget = *it;

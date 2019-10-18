@@ -87,6 +87,14 @@ class AnnotationStyle: public vtkInteractorStyleRubberBandPick{
             this->SelectedWidget->Initialize(this);
         }
 
+        void SwitchFocalPoints(std::set<vtkSmartPointer<AnnotationWidget>>::iterator iterator, vtkCamera* camera){
+            double position[3];
+            auto widget = *iterator;
+            widget->GetPosition(position);
+            camera->SetFocalPoint(position);
+            this->ResetVerticalView(camera);
+        }
+
         void InitAnnotationWidgetFromLabel(){
             int numOfFeatures = this->SelectedWidget->GetNumOfFeatures();
             Blob blob(numOfFeatures);
