@@ -528,6 +528,7 @@ void AnnotationStyle::OnLeftButtonUp(){
         // place box and arrow
         this->SelectedWidget->PlaceAnnotationBoxWidget();
         this->SelectedWidget->PlaceArrowActor();
+        this->SwitchFocalPoints();
         if(IsImageEvent){
             // if it happened in point cloud viewport, not necessary to draw box
 
