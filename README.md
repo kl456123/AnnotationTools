@@ -16,7 +16,7 @@
 
 ## Installation
 
-* install vtk first
+* install vtk-8 first
 compile vtk from source and then make install to /usr/local/include/vtk
 
 * compile project
